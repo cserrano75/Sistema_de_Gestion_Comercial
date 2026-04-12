@@ -1,0 +1,14 @@
+# Ignorar el entorno virtual (muy importante)
+venv/
+env/
+
+# Ignorar archivos de caché de Python
+__pycache__/
+*.py[cod]
+
+# Ignorar archivos de entorno (datos sensibles como contraseñas de BD)
+.env
+
+# Archivos de sistema o IDE
+.vscode/
+.idea/
