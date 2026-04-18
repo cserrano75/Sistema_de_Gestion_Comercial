@@ -1,3 +1,6 @@
+# Aquí definiremos qué datos aceptamos del exterior. 
+# Esto previene que alguien intente enviar campos maliciosos a la base de datos.
+
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import datetime
@@ -6,8 +9,9 @@ from datetime import datetime
 class ContactoBase(BaseModel):
     nombre: str
     cargo: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: EmailStr
     telefono: Optional[str] = None
+    proyecto_id: int
 
 class ContactoCreate(ContactoBase):
     proyecto_id: int
@@ -31,8 +35,29 @@ class ProyectoCreate(ProyectoBase):
 
 class Proyecto(ProyectoBase):
     id: int
-    fecha_inicio: datetime
-    contactos: List[Contacto] = [] # Incluimos los contactos vinculados
-    
+    contactos: List[Contacto] = []
+    eventos: List[Bitacora] = [] # Aquí es donde conectamos la bitácora al proyecto
+
     class Config:
         from_attributes = True
+
+# --- SCHEMAS PARA BITÁCORA ---
+
+class BitacoraBase(BaseModel):
+    proyecto_id: int
+    tipo_entrada: str  # Ejemplo: "Llamada", "Visita", "Email"
+    contenido: str
+    accion_pendiente: bool = False
+
+class BitacoraCreate(BitacoraBase):
+    pass
+
+class Bitacora(BitacoraBase):
+    id: int
+    fecha_registro: datetime
+
+    class Config:
+        from_attributes = True
+
+# --- RE-DEFINICIÓN DE PROYECTO (Para incluir la bitácora en las consultas) ---
+

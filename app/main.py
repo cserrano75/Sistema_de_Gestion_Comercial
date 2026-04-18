@@ -3,8 +3,11 @@ from fastapi import FastAPI
 from .database import engine, Base
 from .routes import proyectos # Importamos nuestro nuevo archivo de rutas
 
-# Creamos las tablas en la base de datos
-Base.metadata.create_all(bind=engine)
+# ESTO ES LO QUE DEBES ASEGURAR:
+# Primero borramos todo lo que SQLAlchemy crea que existe
+# Base.metadata.drop_all(bind=engine) 
+# Luego creamos todo desde cero con los nuevos modelos
+Base.metadata.create_all(bind=engine) 
 
 app = FastAPI(title="CRM Industrial - Claudio Serrano")
 
