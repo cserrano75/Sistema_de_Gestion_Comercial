@@ -61,3 +61,26 @@ class Proyecto(ProyectoBase):
 
     class Config:
         from_attributes = True
+
+
+
+class ClienteBase(BaseModel):
+    rut: str
+    razon_social: str
+    giro: Optional[str] = None
+    direccion: Optional[str] = None
+
+class ClienteCreate(ClienteBase):
+    pass
+
+class Cliente(ClienteBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+# Actualiza también el esquema de Proyecto para que acepte cliente_id
+class ProyectoCreate(BaseModel):
+    nombre: str
+    cliente_id: int  # Ahora esperamos el ID numérico del cliente
+    presupuesto: float
+    estado: Optional[str] = "Cotización"

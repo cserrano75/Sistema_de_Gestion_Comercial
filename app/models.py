@@ -8,21 +8,31 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
 
-# NOTA: Este archivo define la estructura REAL en la base de datos Postgres.
-# Es el equivalente a diseñar las tablas en el Relationship Manager de Access.
+class Cliente(Base):
+    __tablename__ = "clientes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    rut = Column(String, unique=True, index=True)
+    razon_social = Column(String, index=True)
+    giro = Column(String)
+    direccion = Column(String)
+    
+    # Un cliente puede tener muchos proyectos asociados
+    proyectos = relationship("Proyecto", back_populates="cliente")
 
 class Proyecto(Base):
     __tablename__ = "proyectos"
 
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String, index=True)
-    cliente = Column(String)
+    
+    # CONEXIÓN: El proyecto ahora pertenece a un Cliente ID
+    cliente_id = Column(Integer, ForeignKey("clientes.id"))
     presupuesto = Column(Float)
     estado = Column(String, default="Cotización")
     
-    # RELACIONES: 
-    # 'contactos' y 'eventos' son como sub-formularios vinculados.
-    # No existen como columnas en la tabla 'proyectos', sino como enlaces lógicos.
+    # RELACIONES
+    cliente = relationship("Cliente", back_populates="proyectos")
     contactos = relationship("Contacto", back_populates="proyecto")
     eventos = relationship("Bitacora", back_populates="proyecto")
 
@@ -35,10 +45,7 @@ class Contacto(Base):
     email = Column(String)
     telefono = Column(String)
     
-    # CLAVE FORÁNEA: El ancla que lo une al proyecto.
     proyecto_id = Column(Integer, ForeignKey("proyectos.id"))
-    
-    # El camino de vuelta: permite saber a qué proyecto pertenece este contacto.
     proyecto = relationship("Proyecto", back_populates="contactos")
 
 class Bitacora(Base):
@@ -46,11 +53,8 @@ class Bitacora(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     proyecto_id = Column(Integer, ForeignKey("proyectos.id"))
-    
-    # Registro automático de tiempo (para no tener que escribir la fecha a mano)
     fecha_registro = Column(DateTime(timezone=True), server_default=func.now())
-    
-    tipo_entrada = Column(String) # Llamada, Reunión, Correo
+    tipo_entrada = Column(String) 
     contenido = Column(String)
     accion_pendiente = Column(Boolean, default=False)
     
