@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routes import proyectos, clientes
+from .routes import proyectos, clientes # Tus rutas
 from . import models, database
 
 # Creamos las tablas en la BD
 models.Base.metadata.create_all(bind=database.engine)
 
-app = FastAPI(title="CRM Industrial API")
+app = FastAPI()
+# app = FastAPI(title="CRM Industrial API")
 
 # --- CONFIGURACIÓN DE SEGURIDAD (CORS) ---
 # Esto permite que tu Frontend (puerto 5173) le pida datos al Backend (puerto 8000)
@@ -16,10 +17,10 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # En desarrollo, esto permite que cualquier origen (como localhost:5173) se conecte
     allow_credentials=True,
-    allow_methods=["*"], # Permite todos los métodos (GET, POST, etc.)
-    allow_headers=["*"], # Permite todas las cabeceras
+    allow_methods=["*"],  # Permite GET, POST, PUT, DELETE, etc.
+    allow_headers=["*"],  # Permite todos los encabezados
 )
 
 # Registramos las rutas

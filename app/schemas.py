@@ -62,8 +62,6 @@ class Proyecto(ProyectoBase):
     class Config:
         from_attributes = True
 
-
-
 class ClienteBase(BaseModel):
     rut: str
     razon_social: str
@@ -84,3 +82,8 @@ class ProyectoCreate(BaseModel):
     cliente_id: int  # Ahora esperamos el ID numérico del cliente
     presupuesto: float
     estado: Optional[str] = "Cotización"
+
+class Proyecto(ProyectoCreate):
+    id: int
+    class Config:
+        from_attributes = True
