@@ -42,6 +42,12 @@ class Bitacora(BitacoraBase):
     class Config:
         from_attributes = True
 
+class Bitacora(BitacoraCreate):
+    id: int
+    fecha_registro: datetime
+    class Config:
+        from_attributes = True        
+
 # --- ESQUEMAS DE PROYECTO ---
 class ProyectoBase(BaseModel):
     nombre: str

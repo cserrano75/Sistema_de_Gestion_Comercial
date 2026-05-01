@@ -1,25 +1,26 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import SeccionBitacora from './components/SeccionBitacora' // ¡No olvides la importación!
 
 const API_BASE = 'http://127.0.0.1:8000'
 
 function App() {
+  // 1. ESTADOS
   const [vistaActual, setVistaActual] = useState('proyectos')
   const [cargando, setCargando] = useState(true)
   const [mostrarModal, setMostrarModal] = useState(false)
-
   const [proyectos, setProyectos] = useState([])
   const [clientes, setClientes] = useState([])
-
-  const [nuevoCliente, setNuevoCliente] = useState({
-    rut: '', razon_social: '', giro: '', direccion: ''
-  })
   
-  const [nuevoProyecto, setNuevoProyecto] = useState({
-    nombre: '', cliente_id: '', presupuesto: 0, estado: 'Cotización'
-  })
+  // Estados para Bitácora
+  const [proyectoSeleccionado, setProyectoSeleccionado] = useState(null);
+  const [eventosBitacora, setEventosBitacora] = useState([]);
+  const [mostrarBitacora, setMostrarBitacora] = useState(false);
 
-  // Función de carga aislada
+  const [nuevoCliente, setNuevoCliente] = useState({ rut: '', razon_social: '', giro: '', direccion: '' })
+  const [nuevoProyecto, setNuevoProyecto] = useState({ nombre: '', cliente_id: '', presupuesto: 0, estado: 'Cotización' })
+
+  // 2. FUNCIONES DE CARGA
   const cargarTodo = async () => {
     try {
       setCargando(true)
@@ -27,17 +28,13 @@ function App() {
       const resCli = await axios.get(`${API_BASE}/clientes/`)
       setProyectos(resProy.data || [])
       setClientes(resCli.data || [])
-    } catch (e) {
-      console.error("Fallo al cargar:", e)
-    } finally {
-      setCargando(false)
-    }
+    } catch (e) { console.error("Fallo al cargar:", e) }
+    finally { setCargando(false) }
   }
 
-  useEffect(() => {
-    cargarTodo()
-  }, []) // Correr una sola vez al inicio
+  useEffect(() => { cargarTodo() }, [])
 
+  // 3. LÓGICA DE NEGOCIO (POSTS)
   const guardarCliente = async (e) => {
     e.preventDefault()
     try {
@@ -59,6 +56,23 @@ function App() {
     } catch (e) { alert("Error al guardar proyecto") }
   }
 
+  const abrirBitacora = async (proyecto) => {
+    try {
+      const res = await axios.get(`${API_BASE}/bitacora/${proyecto.id}`);
+      setEventosBitacora(res.data);
+      setProyectoSeleccionado(proyecto);
+      setMostrarBitacora(true);
+    } catch (error) { console.error("Error al cargar bitácora:", error); }
+  };
+
+  const guardarEnBitacora = async (nuevaEntrada) => {
+    try {
+      const res = await axios.post(`${API_BASE}/bitacora/`, nuevaEntrada);
+      setEventosBitacora([res.data, ...eventosBitacora]);
+    } catch (error) { alert("Error al guardar en bitácora"); }
+  };
+
+  // 4. RENDERIZADO (RETURN ÚNICO)
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
       
@@ -68,22 +82,16 @@ function App() {
           CRM <span className="text-blue-500">IND</span>
         </div>
         <nav className="flex-1 p-4 space-y-2 mt-4">
-          <button onClick={() => setVistaActual('proyectos')} className={`w-full text-left p-4 rounded-xl font-bold ${vistaActual === 'proyectos' ? 'bg-blue-600' : 'hover:bg-slate-800'}`}>
-            📊 PROYECTOS
-          </button>
-          <button onClick={() => setVistaActual('clientes')} className={`w-full text-left p-4 rounded-xl font-bold ${vistaActual === 'clientes' ? 'bg-blue-600' : 'hover:bg-slate-800'}`}>
-            🏢 CLIENTES
-          </button>
+          <button onClick={() => setVistaActual('proyectos')} className={`w-full text-left p-4 rounded-xl font-bold ${vistaActual === 'proyectos' ? 'bg-blue-600' : 'hover:bg-slate-800'}`}>📊 PROYECTOS</button>
+          <button onClick={() => setVistaActual('clientes')} className={`w-full text-left p-4 rounded-xl font-bold ${vistaActual === 'clientes' ? 'bg-blue-600' : 'hover:bg-slate-800'}`}>🏢 CLIENTES</button>
         </nav>
       </aside>
 
-      {/* CONTENIDO */}
-      <main className="flex-1 flex flex-col">
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="flex-1 flex flex-col relative">
         <header className="h-20 bg-white border-b flex items-center justify-between px-10">
           <h2 className="text-xl font-bold uppercase">{vistaActual}</h2>
-          <button onClick={() => setMostrarModal(true)} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold text-sm">
-            + AGREGAR
-          </button>
+          <button onClick={() => setMostrarModal(true)} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold text-sm">+ AGREGAR</button>
         </header>
 
         <section className="p-10 flex-1 overflow-y-auto">
@@ -98,6 +106,7 @@ function App() {
                       <th className="p-4">Proyecto</th>
                       <th className="p-4">Presupuesto</th>
                       <th className="p-4">Estado</th>
+                      <th className="p-4">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -106,6 +115,9 @@ function App() {
                         <td className="p-4 font-bold">{p.nombre}</td>
                         <td className="p-4 font-mono text-blue-600 font-bold">${p.presupuesto.toLocaleString('es-CL')}</td>
                         <td className="p-4 text-xs font-black uppercase text-blue-500">{p.estado}</td>
+                        <td className="p-4">
+                          <button onClick={() => abrirBitacora(p)} className="text-blue-600 hover:underline text-sm font-bold">Ver Historial</button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -124,20 +136,34 @@ function App() {
             )
           )}
         </section>
+
+        {/* PANEL LATERAL DE BITÁCORA (Se dibuja encima si está activo) */}
+        {mostrarBitacora && (
+          <div className="fixed inset-0 z-40 flex justify-end">
+             {/* Overlay oscuro para cerrar al hacer clic fuera */}
+            <div className="absolute inset-0 bg-slate-900/40" onClick={() => setMostrarBitacora(false)}></div>
+            <div className="relative z-50 w-full max-w-md">
+                <SeccionBitacora 
+                    proyectoId={proyectoSeleccionado?.id}
+                    eventos={eventosBitacora}
+                    alGuardar={guardarEnBitacora}
+                    alCerrar={() => setMostrarBitacora(false)}
+                />
+            </div>
+          </div>
+        )}
       </main>
 
-      {/* MODAL UNIFICADO POR CONDICIÓN */}
+      {/* MODAL DE CREACIÓN */}
       {mostrarModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
             <button onClick={() => setMostrarModal(false)} className="absolute top-4 right-4 font-bold">✕</button>
             <h2 className="text-2xl font-black mb-6">Nuevo {vistaActual === 'proyectos' ? 'Proyecto' : 'Cliente'}</h2>
-            
             {vistaActual === 'clientes' ? (
               <form onSubmit={guardarCliente} className="space-y-4">
                 <input required placeholder="RUT" className="w-full p-3 bg-slate-50 rounded-lg outline-none" value={nuevoCliente.rut} onChange={e => setNuevoCliente({...nuevoCliente, rut: e.target.value})} />
                 <input required placeholder="Razón Social" className="w-full p-3 bg-slate-50 rounded-lg outline-none" value={nuevoCliente.razon_social} onChange={e => setNuevoCliente({...nuevoCliente, razon_social: e.target.value})} />
-                <input placeholder="Giro" className="w-full p-3 bg-slate-50 rounded-lg outline-none" value={nuevoCliente.giro} onChange={e => setNuevoCliente({...nuevoCliente, giro: e.target.value})} />
                 <button type="submit" className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold">GUARDAR CLIENTE</button>
               </form>
             ) : (

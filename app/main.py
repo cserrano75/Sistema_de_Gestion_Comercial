@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes import proyectos, clientes # Tus rutas
 from . import models, database
+from .routes import proyectos, clientes, bitacora # <--- Agregar bitacora
 
 # Creamos las tablas en la BD
 models.Base.metadata.create_all(bind=database.engine)
@@ -26,6 +27,7 @@ app.add_middleware(
 # Registramos las rutas
 app.include_router(proyectos.router)
 app.include_router(clientes.router) # Activa el maestro de clientes
+app.include_router(bitacora.router)
 
 @app.get("/")
 def home():
