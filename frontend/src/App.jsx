@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
-import SeccionBitacora from './components/SeccionBitacora' // ¡No olvides la importación!
+import SeccionBitacora from './components/SeccionBitacora'
 
 const API_BASE = 'http://127.0.0.1:8000'
 
@@ -17,24 +17,56 @@ function App() {
   const [eventosBitacora, setEventosBitacora] = useState([]);
   const [mostrarBitacora, setMostrarBitacora] = useState(false);
 
-  const [nuevoCliente, setNuevoCliente] = useState({ rut: '', razon_social: '', giro: '', direccion: '' })
-  const [nuevoProyecto, setNuevoProyecto] = useState({ nombre: '', cliente_id: '', presupuesto: 0, estado: 'Cotización' })
+  // Estado para Estadísticas (Reportabilidad)
+  const [stats, setStats] = useState({
+      monto_adjudicado: 0,
+      monto_en_estudio: 0,
+      monto_perdido: 0,
+      tasa_conversion: 0
+  });
 
-  // 2. FUNCIONES DE CARGA
+  const [nuevoCliente, setNuevoCliente] = useState({ rut: '', razon_social: '', giro: '', direccion: '' })
+  const [nuevoProyecto, setNuevoProyecto] = useState({ nombre: '', cliente_id: '', presupuesto: 0, estado: 'Lead o Prospecto' })
+
+  // Filtros de estados
+  const [filtroEstado, setFiltroEstado] = useState("Todos");
+  const estadosFiltro = ["Todos", "Lead o Prospecto", "Estudio", "Cotizado", "Adjudicado", "Perdido", "Anulado o Postergado"];
+
+  const proyectosFiltrados = proyectos.filter(p => 
+      filtroEstado === "Todos" ? true : p.estado === filtroEstado
+  );
+
+  // 2. FUNCIONES DE CARGA (UNIFICADA)
   const cargarTodo = async () => {
     try {
       setCargando(true)
-      const resProy = await axios.get(`${API_BASE}/proyectos/`)
-      const resCli = await axios.get(`${API_BASE}/clientes/`)
+      
+      // Lanzamos todas las peticiones en paralelo para mayor velocidad
+      const [resProy, resCli, resStats] = await Promise.all([
+        axios.get(`${API_BASE}/proyectos/`),
+        axios.get(`${API_BASE}/clientes/`),
+        axios.get(`${API_BASE}/proyectos/stats/resumen`)
+      ]);
+
       setProyectos(resProy.data || [])
       setClientes(resCli.data || [])
-    } catch (e) { console.error("Fallo al cargar:", e) }
-    finally { setCargando(false) }
+      setStats(resStats.data || {
+          monto_adjudicado: 0,
+          monto_en_estudio: 0,
+          monto_perdido: 0,
+          tasa_conversion: 0
+      });
+
+    } catch (e) { 
+      console.error("Fallo al cargar datos:", e) 
+    } finally { 
+      setCargando(false) 
+    }
   }
 
   useEffect(() => { cargarTodo() }, [])
 
-  // 3. LÓGICA DE NEGOCIO (POSTS)
+  // 3. LÓGICA DE NEGOCIO
   const guardarCliente = async (e) => {
     e.preventDefault()
     try {
@@ -50,7 +82,7 @@ function App() {
     if (!nuevoProyecto.cliente_id) return alert("Seleccione cliente")
     try {
       await axios.post(`${API_BASE}/proyectos/`, nuevoProyecto)
-      setNuevoProyecto({ nombre: '', cliente_id: '', presupuesto: 0, estado: 'Cotización' })
+      setNuevoProyecto({ nombre: '', cliente_id: '', presupuesto: 0, estado: 'Lead o Prospecto' })
       setMostrarModal(false)
       cargarTodo()
     } catch (e) { alert("Error al guardar proyecto") }
@@ -62,17 +94,23 @@ function App() {
       setEventosBitacora(res.data);
       setProyectoSeleccionado(proyecto);
       setMostrarBitacora(true);
-    } catch (error) { console.error("Error al cargar bitácora:", error); }
+    } catch (error) {
+      console.error("Error al cargar bitácora:", error);
+    }
   };
 
   const guardarEnBitacora = async (nuevaEntrada) => {
     try {
-      const res = await axios.post(`${API_BASE}/bitacora/`, nuevaEntrada);
-      setEventosBitacora([res.data, ...eventosBitacora]);
-    } catch (error) { alert("Error al guardar en bitácora"); }
+        await axios.post(`${API_BASE}/bitacora/`, nuevaEntrada);
+        // Recargamos todo para actualizar la tabla, los filtros y los KPIs de arriba
+        cargarTodo(); 
+        setMostrarBitacora(false);
+    } catch (error) {
+        alert("Error al guardar en bitácora");
+    }
   };
 
-  // 4. RENDERIZADO (RETURN ÚNICO)
+  // 4. RENDERIZADO
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
       
@@ -99,29 +137,82 @@ function App() {
             <div className="text-center font-bold text-slate-400">Sincronizando...</div>
           ) : (
             vistaActual === 'proyectos' ? (
-              <div className="bg-white rounded-xl shadow border">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 border-b">
-                    <tr className="text-[10px] uppercase font-black text-slate-400">
-                      <th className="p-4">Proyecto</th>
-                      <th className="p-4">Presupuesto</th>
-                      <th className="p-4">Estado</th>
-                      <th className="p-4">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {proyectos.map(p => (
-                      <tr key={p.id} className="border-b hover:bg-slate-50">
-                        <td className="p-4 font-bold">{p.nombre}</td>
-                        <td className="p-4 font-mono text-blue-600 font-bold">${p.presupuesto.toLocaleString('es-CL')}</td>
-                        <td className="p-4 text-xs font-black uppercase text-blue-500">{p.estado}</td>
-                        <td className="p-4">
-                          <button onClick={() => abrirBitacora(p)} className="text-blue-600 hover:underline text-sm font-bold">Ver Historial</button>
-                        </td>
+              <div className="space-y-6">
+                
+                {/* --- NUEVA SECCIÓN DE KPIs --- */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-green-500">
+                        <div className="text-slate-400 text-[10px] font-bold uppercase">Adjudicado</div>
+                        <div className="text-2xl font-black text-slate-800">${stats.monto_adjudicado.toLocaleString('es-CL')}</div>
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-purple-500">
+                        <div className="text-slate-400 text-[10px] font-bold uppercase">En Estudio / Cotizado</div>
+                        <div className="text-2xl font-black text-slate-800">${stats.monto_en_estudio.toLocaleString('es-CL')}</div>
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-red-500">
+                        <div className="text-slate-400 text-[10px] font-bold uppercase">Perdido</div>
+                        <div className="text-2xl font-black text-slate-800">${stats.monto_perdido.toLocaleString('es-CL')}</div>
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-blue-500">
+                        <div className="text-slate-400 text-[10px] font-bold uppercase">Efectividad</div>
+                        <div className="text-2xl font-black text-slate-800">{stats.tasa_conversion}%</div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow border">
+                  {/* FILTROS */}
+                  <div className="p-4 border-b overflow-x-auto pb-2">
+                      <div className="flex space-x-2 min-w-max">
+                          {estadosFiltro.map(estado => {
+                              const conteo = estado === "Todos" ? proyectos.length : proyectos.filter(p => p.estado === estado).length;
+                              return (
+                                  <button
+                                      key={estado}
+                                      onClick={() => setFiltroEstado(estado)}
+                                      className={`px-4 py-2 rounded-full text-[11px] font-black uppercase transition-all flex items-center gap-2 ${
+                                          filtroEstado === estado ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-slate-500 border hover:border-blue-400'
+                                      }`}
+                                  >
+                                      {estado} <span className="opacity-50">{conteo}</span>
+                                  </button>
+                              );
+                          })}
+                      </div>
+                  </div>
+
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 border-b text-[10px] uppercase font-black text-slate-400">
+                      <tr>
+                        <th className="p-4">Proyecto</th>
+                        <th className="p-4">Presupuesto</th>
+                        <th className="p-4">Estado</th>
+                        <th className="p-4">Acciones</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {proyectosFiltrados.map(p => (
+                        <tr key={p.id} className="border-b hover:bg-slate-50 text-sm">
+                          <td className="p-4 font-bold">{p.nombre}</td>
+                          <td className="p-4 font-mono text-blue-600 font-bold">${p.presupuesto.toLocaleString('es-CL')}</td>
+                          <td className="p-4">
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                              p.estado === 'Adjudicado' ? 'bg-green-100 text-green-700' :
+                              p.estado === 'Perdido' ? 'bg-red-100 text-red-700' :
+                              p.estado === 'Cotizado' ? 'bg-blue-100 text-blue-700' :
+                              p.estado === 'Estudio' ? 'bg-purple-100 text-purple-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              {p.estado}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <button onClick={() => abrirBitacora(p)} className="text-blue-600 hover:underline font-bold">Ver Historial</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -137,10 +228,9 @@ function App() {
           )}
         </section>
 
-        {/* PANEL LATERAL DE BITÁCORA (Se dibuja encima si está activo) */}
+        {/* PANEL DE BITÁCORA */}
         {mostrarBitacora && (
           <div className="fixed inset-0 z-40 flex justify-end">
-             {/* Overlay oscuro para cerrar al hacer clic fuera */}
             <div className="absolute inset-0 bg-slate-900/40" onClick={() => setMostrarBitacora(false)}></div>
             <div className="relative z-50 w-full max-w-md">
                 <SeccionBitacora 
@@ -157,7 +247,7 @@ function App() {
       {/* MODAL DE CREACIÓN */}
       {mostrarModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative text-sm">
             <button onClick={() => setMostrarModal(false)} className="absolute top-4 right-4 font-bold">✕</button>
             <h2 className="text-2xl font-black mb-6">Nuevo {vistaActual === 'proyectos' ? 'Proyecto' : 'Cliente'}</h2>
             {vistaActual === 'clientes' ? (

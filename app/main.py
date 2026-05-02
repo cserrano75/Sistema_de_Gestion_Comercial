@@ -16,13 +16,16 @@ origins = [
     "http://localhost:5173",
 ]
 
+# Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En desarrollo, esto permite que cualquier origen (como localhost:5173) se conecte
+    allow_origins=["*"], # En desarrollo, esto permite que cualquier origen (como localhost:5173) se conecte
     allow_credentials=True,
-    allow_methods=["*"],  # Permite GET, POST, PUT, DELETE, etc.
-    allow_headers=["*"],  # Permite todos los encabezados
+    allow_methods=["*"], # Permite GET, POST, PUT, DELETE, etc.
+    allow_headers=["*"], # Permite todos los encabezados
 )
+
+# ... el resto de tus rutas ...
 
 # Registramos las rutas
 app.include_router(proyectos.router)

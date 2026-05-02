@@ -4,8 +4,8 @@
 # No tocan la base de datos directamente.
 
 from pydantic import BaseModel
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional  # Añade List aquí
 
 # NOTA: Estos son como los 'User-Defined Types' (UDT) de VB6.
 # Sirven para que el sistema sepa qué campos esperar del Frontend.
@@ -27,11 +27,12 @@ class Contacto(ContactoBase):
         from_attributes = True
 
 # --- ESQUEMAS DE BITÁCORA ---
+
 class BitacoraBase(BaseModel):
     proyecto_id: int
-    tipo_entrada: str  # Ejemplo: "Llamada", "Visita", "Email"
+    tipo_entrada: str
     contenido: str
-    accion_pendiente: bool = False
+    estado_nuevo: Optional[str] = None # Puede ser un string o puede ser None (nulo)
 
 class BitacoraCreate(BitacoraBase):
     pass
@@ -39,14 +40,9 @@ class BitacoraCreate(BitacoraBase):
 class Bitacora(BitacoraBase):
     id: int
     fecha_registro: datetime
-    class Config:
-        from_attributes = True
 
-class Bitacora(BitacoraCreate):
-    id: int
-    fecha_registro: datetime
     class Config:
-        from_attributes = True        
+        from_attributes = True     
 
 # --- ESQUEMAS DE PROYECTO ---
 class ProyectoBase(BaseModel):
