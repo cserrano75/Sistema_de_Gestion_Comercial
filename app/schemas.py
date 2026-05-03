@@ -3,7 +3,7 @@
 # Los Schemas son solo para validar la entrada y salida de datos por internet. 
 # No tocan la base de datos directamente.
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from datetime import datetime
 from typing import List, Optional  # Añade List aquí
 
@@ -89,3 +89,27 @@ class Proyecto(ProyectoCreate):
     id: int
     class Config:
         from_attributes = True
+
+# Validacion de usuarios
+# ######################
+
+class UserBase(BaseModel):
+    email: EmailStr
+    nombre: Optional[str] = None
+
+class UserCreate(UserBase):
+    password: str # Solo se usa para recibir la clave al crear el usuario
+
+class UserResponse(UserBase):
+    id: int
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: Optional[str] = None

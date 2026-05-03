@@ -1,23 +1,26 @@
-import React, { useState, useEffect } from 'react'
-import axios from 'axios'
-import SeccionBitacora from './components/SeccionBitacora'
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+// IMPORTACIONES DE COMPONENTES
+import Login from './components/Login';
+import SeccionBitacora from './components/SeccionBitacora';
 
-const API_BASE = 'http://127.0.0.1:8000'
+const API_BASE = 'http://127.0.0.1:8000';
 
 function App() {
-  // 1. ESTADOS
-  const [vistaActual, setVistaActual] = useState('proyectos')
-  const [cargando, setCargando] = useState(true)
-  const [mostrarModal, setMostrarModal] = useState(false)
-  const [proyectos, setProyectos] = useState([])
-  const [clientes, setClientes] = useState([])
+  // --- 1. ESTADOS DE AUTENTICACIÓN ---
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // --- 2. ESTADOS DEL CRM ---
+  const [vistaActual, setVistaActual] = useState('proyectos');
+  const [cargando, setCargando] = useState(true);
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [proyectos, setProyectos] = useState([]);
+  const [clientes, setClientes] = useState([]);
   
-  // Estados para Bitácora
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState(null);
   const [eventosBitacora, setEventosBitacora] = useState([]);
   const [mostrarBitacora, setMostrarBitacora] = useState(false);
 
-  // Estado para Estadísticas (Reportabilidad)
   const [stats, setStats] = useState({
       monto_adjudicado: 0,
       monto_en_estudio: 0,
@@ -25,68 +28,77 @@ function App() {
       tasa_conversion: 0
   });
 
-  const [nuevoCliente, setNuevoCliente] = useState({ rut: '', razon_social: '', giro: '', direccion: '' })
-  const [nuevoProyecto, setNuevoProyecto] = useState({ nombre: '', cliente_id: '', presupuesto: 0, estado: 'Lead o Prospecto' })
-
-  // Filtros de estados
+  const [nuevoCliente, setNuevoCliente] = useState({ rut: '', razon_social: '', giro: '', direccion: '' });
+  const [nuevoProyecto, setNuevoProyecto] = useState({ nombre: '', cliente_id: '', presupuesto: 0, estado: 'Lead o Prospecto' });
   const [filtroEstado, setFiltroEstado] = useState("Todos");
   const estadosFiltro = ["Todos", "Lead o Prospecto", "Estudio", "Cotizado", "Adjudicado", "Perdido", "Anulado o Postergado"];
 
-  const proyectosFiltrados = proyectos.filter(p => 
-      filtroEstado === "Todos" ? true : p.estado === filtroEstado
-  );
-
-  // 2. FUNCIONES DE CARGA (UNIFICADA)
-  const cargarTodo = async () => {
+  // --- 3. LÓGICA DE CARGA ---
+const cargarTodo = async () => {
     try {
-      setCargando(true)
-      
-      // Lanzamos todas las peticiones en paralelo para mayor velocidad
-      const [resProy, resCli, resStats] = await Promise.all([
-        axios.get(`${API_BASE}/proyectos/`),
-        axios.get(`${API_BASE}/clientes/`),
-        axios.get(`${API_BASE}/proyectos/stats/resumen`)
-      ]);
+        setCargando(true);
+        const token = localStorage.getItem('token'); // Recuperamos la llave
+        
+        const config = {
+            headers: { Authorization: `Bearer ${token}` } // La pegamos en el sobre
+        };
 
-      setProyectos(resProy.data || [])
-      setClientes(resCli.data || [])
-      setStats(resStats.data || {
-          monto_adjudicado: 0,
-          monto_en_estudio: 0,
-          monto_perdido: 0,
-          tasa_conversion: 0
-      });
+        const [resProy, resCli, resStats] = await Promise.all([
+            axios.get(`${API_BASE}/proyectos/`, config),
+            axios.get(`${API_BASE}/clientes/`, config),
+            axios.get(`${API_BASE}/proyectos/stats/resumen`, config)
+        ]);
 
-    } catch (e) { 
-      console.error("Fallo al cargar datos:", e) 
-    } finally { 
-      setCargando(false) 
+      setProyectos(resProy.data || []);
+      setClientes(resCli.data || []);
+      setStats(resStats.data || { monto_adjudicado: 0, monto_en_estudio: 0, monto_perdido: 0, tasa_conversion: 0 });
+    } catch (e) {
+            if (e.response && e.response.status === 401) {
+                handleLogout(); // Si el token expiró, lo sacamos al login
+            }
+        }
+    };
+
+  // Efecto inicial: Verificar si ya hay un token y cargar datos si es así
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsAuthenticated(true);
+      cargarTodo();
     }
-  }
+  }, []);
 
-  useEffect(() => { cargarTodo() }, [])
+  // --- 4. FUNCIONES AUXILIARES ---
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setIsAuthenticated(false);
+  };
 
-  // 3. LÓGICA DE NEGOCIO
+  const manejarLoginExitoso = () => {
+    setIsAuthenticated(true);
+    cargarTodo(); // Cargamos los datos apenas se loguea
+  };
+
   const guardarCliente = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      await axios.post(`${API_BASE}/clientes/`, nuevoCliente)
-      setNuevoCliente({ rut: '', razon_social: '', giro: '', direccion: '' })
-      setMostrarModal(false)
-      cargarTodo()
-    } catch (e) { alert("Error al guardar cliente") }
-  }
+      await axios.post(`${API_BASE}/clientes/`, nuevoCliente);
+      setNuevoCliente({ rut: '', razon_social: '', giro: '', direccion: '' });
+      setMostrarModal(false);
+      cargarTodo();
+    } catch (e) { alert("Error al guardar cliente"); }
+  };
 
   const manejarGuardarProyecto = async (e) => {
-    e.preventDefault()
-    if (!nuevoProyecto.cliente_id) return alert("Seleccione cliente")
+    e.preventDefault();
+    if (!nuevoProyecto.cliente_id) return alert("Seleccione cliente");
     try {
-      await axios.post(`${API_BASE}/proyectos/`, nuevoProyecto)
-      setNuevoProyecto({ nombre: '', cliente_id: '', presupuesto: 0, estado: 'Lead o Prospecto' })
-      setMostrarModal(false)
-      cargarTodo()
-    } catch (e) { alert("Error al guardar proyecto") }
-  }
+      await axios.post(`${API_BASE}/proyectos/`, nuevoProyecto);
+      setNuevoProyecto({ nombre: '', cliente_id: '', presupuesto: 0, estado: 'Lead o Prospecto' });
+      setMostrarModal(false);
+      cargarTodo();
+    } catch (e) { alert("Error al guardar proyecto"); }
+  };
 
   const abrirBitacora = async (proyecto) => {
     try {
@@ -94,23 +106,29 @@ function App() {
       setEventosBitacora(res.data);
       setProyectoSeleccionado(proyecto);
       setMostrarBitacora(true);
-    } catch (error) {
-      console.error("Error al cargar bitácora:", error);
-    }
+    } catch (error) { console.error("Error al cargar bitácora:", error); }
   };
 
   const guardarEnBitacora = async (nuevaEntrada) => {
     try {
         await axios.post(`${API_BASE}/bitacora/`, nuevaEntrada);
-        // Recargamos todo para actualizar la tabla, los filtros y los KPIs de arriba
         cargarTodo(); 
         setMostrarBitacora(false);
-    } catch (error) {
-        alert("Error al guardar en bitácora");
-    }
+    } catch (error) { alert("Error al guardar en bitácora"); }
   };
 
-  // 4. RENDERIZADO
+  const proyectosFiltrados = proyectos.filter(p => 
+      filtroEstado === "Todos" ? true : p.estado === filtroEstado
+  );
+
+  // --- 5. RENDERIZADO CONDICIONAL ---
+  
+  // Si no está autenticado, mostramos ÚNICAMENTE el Login
+  if (!isAuthenticated) {
+    return <Login onLoginSuccess={manejarLoginExitoso} />;
+  }
+
+  // Si está autenticado, mostramos todo el CRM
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
       
@@ -123,6 +141,12 @@ function App() {
           <button onClick={() => setVistaActual('proyectos')} className={`w-full text-left p-4 rounded-xl font-bold ${vistaActual === 'proyectos' ? 'bg-blue-600' : 'hover:bg-slate-800'}`}>📊 PROYECTOS</button>
           <button onClick={() => setVistaActual('clientes')} className={`w-full text-left p-4 rounded-xl font-bold ${vistaActual === 'clientes' ? 'bg-blue-600' : 'hover:bg-slate-800'}`}>🏢 CLIENTES</button>
         </nav>
+        {/* Botón de Salir al final del Sidebar */}
+        <div className="p-4 border-t border-slate-800">
+          <button onClick={handleLogout} className="w-full text-left p-4 rounded-xl font-bold text-red-400 hover:bg-red-900/20 transition-colors">
+            🚪 CERRAR SESIÓN
+          </button>
+        </div>
       </aside>
 
       {/* CONTENIDO PRINCIPAL */}
@@ -139,7 +163,7 @@ function App() {
             vistaActual === 'proyectos' ? (
               <div className="space-y-6">
                 
-                {/* --- NUEVA SECCIÓN DE KPIs --- */}
+                {/* KPIs */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                     <div className="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-green-500">
                         <div className="text-slate-400 text-[10px] font-bold uppercase">Adjudicado</div>
@@ -180,6 +204,7 @@ function App() {
                       </div>
                   </div>
 
+                  {/* TABLA PROYECTOS */}
                   <table className="w-full text-left">
                     <thead className="bg-slate-50 border-b text-[10px] uppercase font-black text-slate-400">
                       <tr>
@@ -215,6 +240,7 @@ function App() {
                 </div>
               </div>
             ) : (
+              /* VISTA CLIENTES */
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {clientes.map(c => (
                   <div key={c.id} className="bg-white p-6 rounded-xl shadow border border-slate-100">
@@ -271,7 +297,7 @@ function App() {
         </div>
       )}
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

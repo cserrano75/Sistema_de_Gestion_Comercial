@@ -3,7 +3,7 @@
 # en la base de datos de forma permanente
 # *******************************************************************************
 
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text # <--- Importamos Text
+from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, Text # <--- Importamos Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -62,3 +62,13 @@ class Bitacora(Base):
     fecha_registro = Column(DateTime, default=func.now())
 
     proyecto = relationship("Proyecto", back_populates="bitacoras")
+
+# A partir de aqui validamos el ingreso de los usuarios
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    nombre = Column(String)
+    is_active = Column(Boolean, default=True)
