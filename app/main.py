@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth_routes, proyectos, clientes, bitacora
 from app import models, database
+from routes import auth_routes, proyectos, clientes, bitacora
+from database import get_db
 
 # Crear tablas
 models.Base.metadata.create_all(bind=database.engine)
