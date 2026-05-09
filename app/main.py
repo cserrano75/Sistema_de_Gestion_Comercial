@@ -1,15 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app import models, database
-# from routes import auth_routes, proyectos, clientes, bitacora
-from app.routes import auth_routes, proyectos, clientes, bitacora
-from database import get_db
+# IMPORTACIONES DE VECINDAD (Sin "app." ni "..")
+from routes import auth_routes, proyectos, clientes, bitacora
+import models
+from database import engine
 
-
-
-
-# Crear tablas
-models.Base.metadata.create_all(bind=database.engine)
+# El resto del código sigue igual...
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="CRM Industrial API")
 
