@@ -6,6 +6,8 @@ import models
 from database import engine
 
 # El resto del código sigue igual...
+# mantenemos configuracion
+
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="CRM Industrial API")
