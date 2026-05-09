@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from './api';
 // IMPORTACIONES DE COMPONENTES
 import Login from './components/Login';
 import SeccionBitacora from './components/SeccionBitacora';
 
-const API_BASE = 'http://127.0.0.1:8000';
+// const API_BASE = 'http://127.0.0.1:8000';
 
 function App() {
   // --- 1. ESTADOS DE AUTENTICACIÓN ---
@@ -34,30 +34,28 @@ function App() {
   const estadosFiltro = ["Todos", "Lead o Prospecto", "Estudio", "Cotizado", "Adjudicado", "Perdido", "Anulado o Postergado"];
 
   // --- 3. LÓGICA DE CARGA ---
-const cargarTodo = async () => {
+  const cargarTodo = async () => {
     try {
-        setCargando(true);
-        const token = localStorage.getItem('token'); // Recuperamos la llave
-        
-        const config = {
-            headers: { Authorization: `Bearer ${token}` } // La pegamos en el sobre
-        };
-
-        const [resProy, resCli, resStats] = await Promise.all([
-            axios.get(`${API_BASE}/proyectos/`, config),
-            axios.get(`${API_BASE}/clientes/`, config),
-            axios.get(`${API_BASE}/proyectos/stats/resumen`, config)
-        ]);
+      setCargando(true);
+      
+      // Fíjate que ya NO necesitas pasar el "config" con los headers. 
+      // El interceptor lo hace por ti en secreto.
+      // Prueba quitando la barra final en la llamada
+      const [resProy, resCli, resStats] = await Promise.all([
+        api.get('/proyectos'), // <-- Prueba sin el / final aquí
+        api.get('/clientes'),
+        api.get('/proyectos/stats/resumen')
+      ]);
 
       setProyectos(resProy.data || []);
       setClientes(resCli.data || []);
       setStats(resStats.data || { monto_adjudicado: 0, monto_en_estudio: 0, monto_perdido: 0, tasa_conversion: 0 });
-    } catch (e) {
-            if (e.response && e.response.status === 401) {
-                handleLogout(); // Si el token expiró, lo sacamos al login
-            }
-        }
-    };
+    } catch (e) { 
+      console.error("Error cargando datos:", e);
+    } finally { 
+      setCargando(false);
+    }
+  };
 
   // Efecto inicial: Verificar si ya hay un token y cargar datos si es así
   useEffect(() => {
@@ -82,32 +80,44 @@ const cargarTodo = async () => {
   const guardarCliente = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_BASE}/clientes/`, nuevoCliente);
+      // No necesitas pasar headers, 'api' ya los lleva
+      await api.post('/clientes/', nuevoCliente);
+      
       setNuevoCliente({ rut: '', razon_social: '', giro: '', direccion: '' });
       setMostrarModal(false);
       cargarTodo();
-    } catch (e) { alert("Error al guardar cliente"); }
+    } catch (e) { 
+      alert("Error al guardar cliente"); 
+    }
   };
 
   const manejarGuardarProyecto = async (e) => {
     e.preventDefault();
     if (!nuevoProyecto.cliente_id) return alert("Seleccione cliente");
     try {
-      await axios.post(`${API_BASE}/proyectos/`, nuevoProyecto);
+      await api.post('/proyectos/', nuevoProyecto);
+      
       setNuevoProyecto({ nombre: '', cliente_id: '', presupuesto: 0, estado: 'Lead o Prospecto' });
       setMostrarModal(false);
       cargarTodo();
-    } catch (e) { alert("Error al guardar proyecto"); }
+    } catch (e) { 
+      alert("Error al guardar proyecto"); 
+    }
   };
 
   const abrirBitacora = async (proyecto) => {
-    try {
-      const res = await axios.get(`${API_BASE}/bitacora/${proyecto.id}`);
-      setEventosBitacora(res.data);
-      setProyectoSeleccionado(proyecto);
-      setMostrarBitacora(true);
-    } catch (error) { console.error("Error al cargar bitácora:", error); }
-  };
+      try {
+        // CORRECCIÓN: La ruta correcta según proyectos.py es /proyectos/{id}/bitacora
+        const res = await api.get(`/proyectos/${proyecto.id}/bitacora`);
+        
+        setEventosBitacora(res.data);
+        setProyectoSeleccionado(proyecto);
+        setMostrarBitacora(true);
+      } catch (error) {
+        console.error("Error al cargar bitácora:", error);
+        alert("No se pudo cargar el historial de este proyecto");
+      }
+    };
 
   const guardarEnBitacora = async (nuevaEntrada) => {
     try {

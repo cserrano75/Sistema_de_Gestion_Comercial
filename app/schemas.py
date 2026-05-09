@@ -5,12 +5,34 @@
 
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import List, Optional  # Añade List aquí
+from typing import List, Optional
 
-# NOTA: Estos son como los 'User-Defined Types' (UDT) de VB6.
-# Sirven para que el sistema sepa qué campos esperar del Frontend.
+# --- ESQUEMAS DE SEGURIDAD (TOKEN) ---
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
+
+# --- ESQUEMAS DE USUARIO ---
+
+class UserBase(BaseModel):
+    email: EmailStr
+    nombre: Optional[str] = None
+
+class UserCreate(UserBase):
+    password: str
+
+class UserResponse(UserBase):
+    id: int
+    is_active: bool
+    class Config:
+        from_attributes = True
 
 # --- ESQUEMAS DE CONTACTOS ---
+
 class ContactoBase(BaseModel):
     nombre: str
     cargo: Optional[str] = None
@@ -19,10 +41,10 @@ class ContactoBase(BaseModel):
     proyecto_id: int
 
 class ContactoCreate(ContactoBase):
-    pass # Se usa para el 'INSERT'
+    pass
 
 class Contacto(ContactoBase):
-    id: int # El 'ID' lo devuelve la BD, no lo envía el usuario
+    id: int
     class Config:
         from_attributes = True
 
@@ -32,37 +54,21 @@ class BitacoraBase(BaseModel):
     proyecto_id: int
     tipo_entrada: str
     contenido: str
-    estado_nuevo: Optional[str] = None # Puede ser un string o puede ser None (nulo)
+    estado_nuevo: Optional[str] = None
 
 class BitacoraCreate(BitacoraBase):
     pass
 
-class Bitacora(BitacoraBase):
+class BitacoraResponse(BitacoraBase):
     id: int
     fecha_registro: datetime
-
-    class Config:
-        from_attributes = True     
-
-# --- ESQUEMAS DE PROYECTO ---
-class ProyectoBase(BaseModel):
-    nombre: str
-    cliente: str
-    presupuesto: float
-    estado: str = "Cotización"
-
-class ProyectoCreate(ProyectoBase):
-    pass
-
-class Proyecto(ProyectoBase):
-    id: int
-    # Relaciones: Esto permite que al consultar un proyecto, 
-    # FastAPI traiga automáticamente su gente y sus notas.
-    contactos: List[Contacto] = []
-    eventos: List[Bitacora] = [] 
-
     class Config:
         from_attributes = True
+
+# Para compatibilidad, Bitacora es lo mismo que BitacoraResponse
+Bitacora = BitacoraResponse
+
+# --- ESQUEMAS DE CLIENTES ---
 
 class ClienteBase(BaseModel):
     rut: str
@@ -73,43 +79,30 @@ class ClienteBase(BaseModel):
 class ClienteCreate(ClienteBase):
     pass
 
-class Cliente(ClienteBase):
+class ClienteResponse(ClienteBase):
     id: int
     class Config:
         from_attributes = True
 
-# Actualiza también el esquema de Proyecto para que acepte cliente_id
-class ProyectoCreate(BaseModel):
+# --- ESQUEMAS DE PROYECTO ---
+
+class ProyectoBase(BaseModel):
     nombre: str
-    cliente_id: int  # Ahora esperamos el ID numérico del cliente
+    cliente_id: int 
     presupuesto: float
     estado: Optional[str] = "Cotización"
 
-class Proyecto(ProyectoCreate):
+class ProyectoCreate(ProyectoBase):
+    pass
+
+class ProyectoResponse(ProyectoBase):
     id: int
-    class Config:
-        from_attributes = True
-
-# Validacion de usuarios
-# ######################
-
-class UserBase(BaseModel):
-    email: EmailStr
-    nombre: Optional[str] = None
-
-class UserCreate(UserBase):
-    password: str # Solo se usa para recibir la clave al crear el usuario
-
-class UserResponse(UserBase):
-    id: int
-    is_active: bool
+    # Relaciones: Esto permite que FastAPI traiga los datos vinculados
+    contactos: List[Contacto] = []
+    eventos: List[BitacoraResponse] = [] 
 
     class Config:
         from_attributes = True
 
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-class TokenData(BaseModel):
-    email: Optional[str] = None
+# Este alias es VITAL para que Proyecto y ProyectoResponse funcionen como uno solo
+Proyecto = ProyectoResponse
