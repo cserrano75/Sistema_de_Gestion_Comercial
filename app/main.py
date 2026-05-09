@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# IMPORTACIONES DE VECINDAD (Sin "app." ni "..")
-from routes import auth_routes, proyectos, clientes, bitacora
-import models
-from database import engine
+# IMPORTACIONES ABSOLUTAS (Para que Render encuentre todo desde la raíz)
+from app.routes import auth_routes, proyectos, clientes, bitacora
+from app import models, database
+from app.database import engine
 
 # El resto del código sigue igual...
 # mantenemos configuracion
