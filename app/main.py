@@ -1,14 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# IMPORTACIONES ABSOLUTAS (Para que Render encuentre todo desde la raíz)
+
 from app.routes import auth_routes, proyectos, clientes, bitacora
 from app import models, database
-from app.database import engine
 
-# El resto del código sigue igual...
-# mantenemos configuracion
-
-models.Base.metadata.create_all(bind=engine)
+models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="CRM Industrial API")
 
