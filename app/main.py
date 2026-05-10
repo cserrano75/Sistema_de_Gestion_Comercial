@@ -6,7 +6,7 @@ from routes import auth_routes, proyectos, clientes, bitacora
 import models, database
 
 # Inicialización de la base de datos usando el motor del archivo database
-models.Base.metadata.create_all(bind=database.engine)
+# models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="CRM Industrial API")
 

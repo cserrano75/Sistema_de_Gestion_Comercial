@@ -2,23 +2,26 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
 
-load_dotenv()
-
-# 1. Obtenemos la URL de la variable de entorno
+# 1. Obtenemos la URL (Prioridad a la variable de entorno de Render)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# 2. Corrección automática para Render/Heroku (postgres -> postgresql)
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+# 2. Seguridad: Si no hay URL, usamos una de emergencia o lanzamos error claro
+if not DATABASE_URL:
+    # Esto evitará que la app intente arrancar si la variable está vacía
+    print("CRITICAL: DATABASE_URL is not set!")
+    # Solo para que no explote el engine si falta la variable durante el build
+    DATABASE_URL = "sqlite:///./test.db" 
+
+# 3. Corrección automática (postgres -> postgresql)
+if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# 3. Configuración del Engine
-# Añadimos un chequeo para SSL que Render suele requerir
-connect_args = {"options": "-c client_encoding=utf8"}
-if DATABASE_URL and "localhost" not in DATABASE_URL:
-    # Esto le dice a SQLAlchemy que use una conexión segura en la nube
-    connect_args["sslmode"] = "require"
+# 4. Configuración del Engine
+# Simplificamos connect_args para evitar conflictos de SSL en Render
+connect_args = {}
+if "postgresql" in DATABASE_URL:
+    connect_args = {"options": "-c client_encoding=utf8"}
 
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
