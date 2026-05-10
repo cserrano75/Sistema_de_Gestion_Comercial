@@ -1,22 +1,12 @@
-import sys
-import os
-
-# 1. PRIMERO: Configuramos las rutas (antes de importar tus módulos)
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-# 2. SEGUNDO: Importaciones de librerías externas
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+# Importaciones absolutas
+from app.routes import auth_routes, proyectos, clientes, bitacora
+from app import models, database
 
-# 3. TERCERO: Importaciones de TUS archivos (ahora Python sí sabrá dónde están)
-from routes import auth_routes, proyectos, clientes, bitacora
-import models
-import database
-
-# 4. CUARTO: Inicialización
 app = FastAPI()
 
-# Crear tablas en la base de datos
+# Esto creará las tablas al iniciar
 models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI(title="CRM Industrial API")
