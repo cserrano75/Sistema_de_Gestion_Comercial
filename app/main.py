@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # IMPORTACIONES DIRECTAS (Simples, como en local)
-from routes import auth_routes, proyectos, clientes, bitacora
-import models
-import database
+
+from app.routes import auth_routes, proyectos, clientes, bitacora
+from app import models, database
 
 # Inicialización de la base de datos usando el motor del archivo database
 models.Base.metadata.create_all(bind=database.engine)
