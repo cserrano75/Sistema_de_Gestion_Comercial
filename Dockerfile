@@ -1,24 +1,21 @@
-# Usamos una imagen de Python oficial y ligera
 FROM python:3.11-slim
 
-# Evita que Python genere archivos .pyc y permite ver logs en tiempo real
+# Configuraciones de Python
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+# Importante: Ponemos el directorio actual en el path
+ENV PYTHONPATH=/code/app
 
-ENV PYTHONPATH=/code
-# Directorio de trabajo dentro del contenedor
 WORKDIR /code
 
-# Instalamos dependencias del sistema necesarias para PostgreSQL
+# Instalación de dependencias del sistema
 RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
 
-# Copiamos solo el requirements.txt primero para aprovechar el cache de Docker
-COPY ./app/requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
-
-# Copiamos TODO el contenido de la carpeta app al directorio /code/app
+# Copiamos los archivos de la carpeta app a la raíz del contenedor
 COPY ./app /code/app
 
-# Comando final para arrancar la app
-# Nota: Usamos "app.main:app" porque estamos parados en /code y la carpeta se llama app
+# Instalamos las librerías desde la nueva ubicación
+RUN pip install --no-cache-dir --upgrade -r /code/app/requirements.txt
+
+# El comando de inicio ahora es directo, sin el prefijo "app."
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000"]
