@@ -2,20 +2,19 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-# Le decimos que la raíz de búsqueda es /code
-ENV PYTHONPATH=/code 
+# Le decimos a Python que su casa es la carpeta /app
+ENV PYTHONPATH=/app 
 
-WORKDIR /code
+WORKDIR /app
 
-# Dependencias para PostgreSQL
 RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
 
-# Copiamos los requerimientos y los instalamos
-COPY ./app/requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+# Copiamos los requerimientos desde tu carpeta local app
+COPY ./app/requirements.txt .
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
-# Copiamos toda la carpeta app al contenedor
-COPY ./app /code/app
+# COPIAMOS TODO EL CONTENIDO DE TU CARPETA APP DIRECTO A LA RAÍZ DEL CONTENEDOR
+COPY ./app/ .
 
-# Comando de inicio usando el paquete app
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000"]
+# El comando ahora es directo al grano
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
