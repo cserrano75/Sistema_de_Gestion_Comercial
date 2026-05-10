@@ -5,6 +5,7 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
+ENV PYTHONPATH=/code
 # Directorio de trabajo dentro del contenedor
 WORKDIR /code
 
