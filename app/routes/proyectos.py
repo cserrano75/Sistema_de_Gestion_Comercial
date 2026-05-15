@@ -16,27 +16,19 @@ router = APIRouter(prefix="/proyectos", tags=["Proyectos"])
 @router.get("/", response_model=list[schemas.ProyectoResponse])
 def leer_lista_proyectos(
     db: Session = Depends(database.get_db),
-    current_user: models.Usuario = Depends(obtener_usuario_actual) # <-- Cambiamos str por el modelo Usuario
+    current_user = Depends(obtener_usuario_actual)  # <-- Le quitamos el tipado problemático
 ):
-    """Retorna los proyectos pertenecientes únicamente al usuario autenticado"""
     return db.query(models.Proyecto).filter(models.Proyecto.usuario_id == current_user.id).all()
 
 @router.post("/", response_model=schemas.ProyectoResponse)
 def crear_nuevo_proyecto(
     proyecto: schemas.ProyectoCreate, 
     db: Session = Depends(database.get_db),
-    current_user: models.Usuario = Depends(obtener_usuario_actual) # <-- Cambiamos str por models.Usuario
+    current_user = Depends(obtener_usuario_actual)  # <-- Aquí también
 ):
-    """Registra un nuevo proyecto asociado al usuario autenticado"""
-    # Convertimos el esquema a diccionario
     datos_proyecto = proyecto.model_dump()
-    
-    # Inyectamos el ID del usuario actual que está creando el proyecto
     datos_proyecto["usuario_id"] = current_user.id
-    
-    # Creamos el modelo con los datos completos
     nuevo_proyecto = models.Proyecto(**datos_proyecto)
-    
     db.add(nuevo_proyecto)
     db.commit()
     db.refresh(nuevo_proyecto)
