@@ -1,51 +1,64 @@
 # app/routes/bitacora.py
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
-
-import models, schemas, database
+import models, database, schemas
 from auth import obtener_usuario_actual
 
 router = APIRouter(prefix="/bitacora", tags=["Bitácora"])
-
-get_db = database.get_db
 
 @router.get("/{proyecto_id}", response_model=list[schemas.BitacoraResponse])
 def get_bitacora(
     proyecto_id: int, 
     db: Session = Depends(database.get_db),
-    current_user: str = Depends(obtener_usuario_actual) # <--- EL CANDADO
+    current_user: models.Usuario = Depends(obtener_usuario_actual) # <-- Cambiado a models.Usuario
 ):
+    """Retorna la bitácora de un proyecto, validando que pertenezca al usuario logueado"""
+    # Primero verificamos si el proyecto realmente le pertenece al usuario actual
+    proyecto = db.query(models.Proyecto).filter(
+        models.Proyecto.id == proyecto_id, 
+        models.Proyecto.usuario_id == current_user.id
+    ).first()
+    
+    if not proyecto:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Proyecto no encontrado o no autorizado"
+        )
+        
     return db.query(models.Bitacora).filter(models.Bitacora.proyecto_id == proyecto_id).all()
+
 
 @router.post("/", response_model=schemas.BitacoraResponse)
 def crear_entrada_bitacora(
     entrada: schemas.BitacoraCreate, 
     db: Session = Depends(database.get_db),
-    current_user: str = Depends(obtener_usuario_actual) # <--- EL CANDADO
+    current_user: models.Usuario = Depends(obtener_usuario_actual) # <-- Cambiado a models.Usuario
 ):
-    # Tu lógica actual de guardado...
-    nueva_entrada = models.Bitacora(**entrada.dict())
-    db.add(nueva_entrada)
-    db.commit()
-    db.refresh(nueva_entrada)
-    return nueva_entrada
+    """Crea una entrada en la bitácora y actualiza el estado del proyecto si corresponde"""
+    # 1. Validar que el proyecto al que se le añade la bitácora le pertenezca al usuario
+    proyecto = db.query(models.Proyecto).filter(
+        models.Proyecto.id == entrada.proyecto_id,
+        models.Proyecto.usuario_id == current_user.id
+    ).first()
+    
+    if not proyecto:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="No tienes permiso para modificar este proyecto"
+        )
 
-@router.post("/", response_model=schemas.Bitacora)
-def crear_entrada(entrada: schemas.BitacoraCreate, db: Session = Depends(get_db)):
-    # 1. Crear el registro de la bitácora
-    nueva_entrada = models.Bitacora(**entrada.model_dump())
+    # 2. Convertir esquema a diccionario e inyectar el usuario_id (por si la tabla bitacora lo requiere)
+    datos_entrada = entrada.model_dump()
+    if hasattr(models.Bitacora, 'usuario_id'):
+        datos_entrada["usuario_id"] = current_user.id
+
+    # 3. Crear el registro de la bitácora
+    nueva_entrada = models.Bitacora(**datos_entrada)
     db.add(nueva_entrada)
     
-    # 2. Lógica de cambio de estado:
-    # Si el usuario seleccionó un nuevo estado en el panel lateral...
+    # 4. Lógica de cambio de estado (la magia del panel lateral)
     if entrada.estado_nuevo:
-        proyecto = db.query(models.Proyecto).filter(
-            models.Proyecto.id == entrada.proyecto_id
-        ).first()
-        
-        if proyecto:
-            proyecto.estado = entrada.estado_nuevo # <--- Aquí ocurre la magia
+        proyecto.estado = entrada.estado_nuevo 
     
     db.commit()
     db.refresh(nueva_entrada)
