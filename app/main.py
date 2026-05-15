@@ -4,21 +4,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes import auth_routes, proyectos, clientes, bitacora
 import models, database
 
-app = FastAPI()
+# 1. Creamos la instancia ÚNICA de FastAPI con su título profesional
+app = FastAPI(title="CRM Industrial API")
+
+# 2. Creamos las tablas en la base de datos si no existen
 models.Base.metadata.create_all(bind=database.engine)
 
-app = FastAPI(title="CRM Industrial API")
+# 3. Configuramos CORS de forma segura
+# Aunque tienes ["*"] (que permite todo), definamos explícitamente los orígenes
+# para asegurar que Render no rechace las credenciales/tokens del localhost.
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,  # Cambiado de "*" a la lista explícita para evitar conflictos con credenciales
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Registro de rutas (Endpoints)
-app.include_router(auth_routes.router) # <--- Ahora la seguridad tiene su propio lugar
+# 4. Registro de rutas (Endpoints)
+app.include_router(auth_routes.router)
 app.include_router(proyectos.router)
 app.include_router(clientes.router)
 app.include_router(bitacora.router)

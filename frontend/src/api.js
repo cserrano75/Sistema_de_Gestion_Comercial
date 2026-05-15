@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// Leemos la URL de Render desde las variables de entorno de Vite.
+// Si por alguna razón no la encuentra, dejamos tu URL de Render como respaldo.
+const API_URL = import.meta.env.VITE_API_URL || 'https://sistema-de-gestion-comercial-cbi4.onrender.com';
+
 const api = axios.create({
-    baseURL: 'http://127.0.0.1:8000',
+    baseURL: API_URL,
 });
 
 // INTERCEPTOR DE PETICIÓN: Pega el token antes de que salga la llamada
