@@ -10,6 +10,9 @@ app = FastAPI(title="CRM Industrial API")
 # 2. Creamos las tablas en la base de datos si no existen
 models.Base.metadata.create_all(bind=database.engine)
 
+# FUERZA A FASTAPI A NO REDIRIGIR LAS BARRAS EN PRODUCCIÓN
+app = FastAPI(redirect_slashes=False)
+
 # 3. Configuramos CORS de forma segura
 # Aunque tienes ["*"] (que permite todo), definamos explícitamente los orígenes
 # para asegurar que Render no rechace las credenciales/tokens del localhost.

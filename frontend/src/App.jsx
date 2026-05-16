@@ -145,25 +145,26 @@ const manejarActualizarCliente = async (e) => {
 
 const guardarEnBitacora = async (nuevaEntrada) => {
     try {
-        // Sanitizamos los datos para asegurar que cumplan estrictamente con FastAPI
+        // Sanitizamos los datos usando estrictamente los nombres de campos que exige tu FastAPI
         const datosLimpios = {
-            proyecto_id: nuevaEntrada.proyecto_id,
-            tipo_contacto: nuevaEntrada.tipo_contacto || "Llamada",
-            detalle: nuevaEntrada.detalle ? nuevaEntrada.detalle.trim() : "",
-            estado_proyecto: nuevaEntrada.estado_proyecto || "Lead o Prospecto"
+            proyecto_id: parseInt(nuevaEntrada.proyecto_id), // Aseguramos que sea un número entero
+            tipo_entrada: nuevaEntrada.tipo_entrada || "Llamada", // Mapeado de tipo_contacto -> tipo_entrada
+            contenido: nuevaEntrada.contenido ? nuevaEntrada.contenido.trim() : "", // Mapeado de detalle -> contenido
+            estado_nuevo: nuevaEntrada.estado_nuevo || null // Mapeado de estado_proyecto -> estado_nuevo (acepta string o null)
         };
 
-        // Corregido: Endpoint SIN barra final para evitar redirección y bloqueos de CORS
+        // Enviamos la petición limpia y sin barra diagonal al final
         await api.post('/bitacora', datosLimpios);
         
-        cargarTodo(); // Refresca los estados y contadores principales
+        cargarTodo(); // Refresca los estados, tablas y contadores principales
         setMostrarBitacora(false);
+        
     } catch (error) { 
-        // Desplegamos el error exacto en la consola por si faltara mapear algo en el componente hijo
+        // Desplegamos el error exacto en la consola por si faltara mapear algo
         console.error("Error detallado al guardar bitácora:", error.response?.data || error);
         alert("Error al guardar en bitácora. Revisa la consola del navegador."); 
     }
-  };
+};
 
   const proyectosFiltrados = proyectos.filter(p => 
       filtroEstado === "Todos" ? true : p.estado === filtroEstado
