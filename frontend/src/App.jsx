@@ -145,22 +145,20 @@ const manejarActualizarCliente = async (e) => {
 
 const guardarEnBitacora = async (nuevaEntrada) => {
     try {
-        // Sanitizamos los datos usando estrictamente los nombres de campos que exige tu FastAPI
+        // Sanitizamos los datos con los nombres correctos que ya aprobó el backend
         const datosLimpios = {
-            proyecto_id: parseInt(nuevaEntrada.proyecto_id), // Aseguramos que sea un número entero
-            tipo_entrada: nuevaEntrada.tipo_entrada || "Llamada", // Mapeado de tipo_contacto -> tipo_entrada
-            contenido: nuevaEntrada.contenido ? nuevaEntrada.contenido.trim() : "", // Mapeado de detalle -> contenido
-            estado_nuevo: nuevaEntrada.estado_nuevo || null // Mapeado de estado_proyecto -> estado_nuevo (acepta string o null)
+            proyecto_id: parseInt(nuevaEntrada.proyecto_id), 
+            tipo_entrada: nuevaEntrada.tipo_entrada || "Llamada", 
+            contenido: nuevaEntrada.contenido ? nuevaEntrada.contenido.trim() : "", 
+            estado_nuevo: nuevaEntrada.estado_nuevo || null 
         };
 
-        // Enviamos la petición limpia y sin barra diagonal al final
-        await api.post('/bitacora', datosLimpios);
+        // FORZAMOS LA BARRA FINAL: Si tu backend exige la barra para no dar 404, se la ponemos explícitamente
+        await api.post('/bitacora/', datosLimpios);
         
-        cargarTodo(); // Refresca los estados, tablas y contadores principales
+        cargarTodo(); // Refresca los estados y contadores principales
         setMostrarBitacora(false);
-        
     } catch (error) { 
-        // Desplegamos el error exacto en la consola por si faltara mapear algo
         console.error("Error detallado al guardar bitácora:", error.response?.data || error);
         alert("Error al guardar en bitácora. Revisa la consola del navegador."); 
     }
