@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # IMPORTACIONES DIRECTAS
-from routes import auth_routes, proyectos, clientes, bitacora
+from app.routes import auth_routes, proyectos, clientes, bitacora
 import models, database
 
 # 1. Creamos la instancia ÚNICA de FastAPI con su título profesional
