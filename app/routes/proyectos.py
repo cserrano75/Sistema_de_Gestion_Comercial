@@ -16,9 +16,10 @@ router = APIRouter(prefix="/proyectos", tags=["Proyectos"])
 @router.get("/", response_model=list[schemas.ProyectoResponse])
 def leer_lista_proyectos(
     db: Session = Depends(database.get_db),
-    current_user = Depends(obtener_usuario_actual)  # <-- Le quitamos el tipado problemático
+    current_user = Depends(obtener_usuario_actual)  # Mantiene la seguridad activa
 ):
-    return db.query(models.Proyecto).filter(models.Proyecto.usuario_id == current_user.id).all()
+    # Trae absolutamente todos los proyectos de forma global
+    return db.query(models.Proyecto).all()
 
 @router.post("/", response_model=schemas.ProyectoResponse)
 def crear_nuevo_proyecto(
@@ -27,7 +28,7 @@ def crear_nuevo_proyecto(
     current_user = Depends(obtener_usuario_actual)  # <-- Aquí también
 ):
     datos_proyecto = proyecto.model_dump()
-    datos_proyecto["usuario_id"] = current_user.id
+    # datos_proyecto["usuario_id"] = current_user.id
     nuevo_proyecto = models.Proyecto(**datos_proyecto)
     db.add(nuevo_proyecto)
     db.commit()
