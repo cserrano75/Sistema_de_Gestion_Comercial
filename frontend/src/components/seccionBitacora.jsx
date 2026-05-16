@@ -1,4 +1,3 @@
-// src/components/SeccionBitacora.jsx
 import React, { useState } from 'react';
 
 const SeccionBitacora = ({ eventos, proyectoId, alGuardar, alCerrar }) => {
@@ -16,11 +15,14 @@ const SeccionBitacora = ({ eventos, proyectoId, alGuardar, alCerrar }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Enviamos la nota Y el cambio de estado (si existe)
+        
+        // BLINDAJE: Enviamos los datos asegurándonos de limpiar espacios en blanco.
+        // Si tu backend usa snake_case o nombres específicos, asegúrate de mapearlos aquí si es necesario.
         alGuardar({ 
-            ...nuevaEntrada, 
-            proyecto_id: proyectoId,
-            estado_nuevo: estadoSeleccionado 
+            proyecto_id: parseInt(proyectoId), // Aseguramos que sea un número entero
+            tipo_entrada: nuevaEntrada.tipo_entrada,
+            contenido: nuevaEntrada.contenido.trim(), 
+            estado_nuevo: estadoSeleccionado // Puede ir como string o null si no se seleccionó ninguno
         });
         
         // Limpiar formulario
@@ -61,7 +63,7 @@ const SeccionBitacora = ({ eventos, proyectoId, alGuardar, alCerrar }) => {
                                 <button
                                     key={estado}
                                     type="button"
-                                    onClick={() => setEstadoSeleccionado(estado)}
+                                    onClick={() => setEstadoSeleccionado(estado === estadoSeleccionado ? null : estado)} // Permite deseleccionar si haces click de nuevo
                                     className={`text-[9px] p-2 rounded-lg border font-bold transition-all ${
                                         estadoSeleccionado === estado 
                                         ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
@@ -90,8 +92,8 @@ const SeccionBitacora = ({ eventos, proyectoId, alGuardar, alCerrar }) => {
 
             {/* LISTA DE EVENTOS */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {eventos.map((ev) => (
-                    <div key={ev.id} className="border-l-4 border-blue-500 pl-4 py-1 bg-slate-50 rounded-r-lg p-3">
+                {eventos && eventos.map((ev) => (
+                    <div key={ev.id || ev.fecha_registro} className="border-l-4 border-blue-500 pl-4 py-1 bg-slate-50 rounded-r-lg p-3">
                         <div className="flex justify-between items-start">
                             <span className="text-[10px] font-black text-blue-600 uppercase">{ev.tipo_entrada}</span>
                             {ev.estado_nuevo && (
@@ -102,7 +104,7 @@ const SeccionBitacora = ({ eventos, proyectoId, alGuardar, alCerrar }) => {
                         </div>
                         <p className="text-sm text-slate-700 mt-1">{ev.contenido}</p>
                         <small className="text-[9px] text-slate-400 font-bold block mt-2">
-                            {new Date(ev.fecha_registro).toLocaleString()}
+                            {ev.fecha_registro ? new Date(ev.fecha_registro).toLocaleString() : 'Reciente'}
                         </small>
                     </div>
                 ))}
