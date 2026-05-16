@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from './api';
 // IMPORTACIONES DE COMPONENTES
-import Login from './components/Login';
-import SeccionBitacora from './components/SeccionBitacora';
+import Login from './components/login';
+import SeccionBitacora from './components/seccionBitacora';
 
 // const API_BASE = 'http://127.0.0.1:8000';
 
