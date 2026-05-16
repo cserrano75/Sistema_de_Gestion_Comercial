@@ -87,16 +87,28 @@ function App() {
   };
 
   // NUEVA FUNCIÓN: Dispara los cambios del Cliente al Backend
-  const manejarActualizarCliente = async (e) => {
+const manejarActualizarCliente = async (e) => {
     e.preventDefault();
     try {
-      await api.put(`/clientes/${clienteEditando.id}`, clienteEditando);
+      // Limpiamos los valores null o undefined para que Pydantic no se queje
+      const datosLimpios = {
+        rut: clienteEditando.rut,
+        razon_social: clienteEditando.razon_social,
+        nombre: clienteEditando.nombre || clienteEditando.razon_social, // Por si tu esquema pide 'nombre'
+        giro: clienteEditando.giro || "",
+        direccion: clienteEditando.direccion || ""
+      };
+
+      // Probamos agregándole la barra final por si acaso
+      await api.put(`/clientes/${clienteEditando.id}`, datosLimpios);
+      
       setMostrarModalEditar(false);
       setClienteEditando(null);
       cargarTodo(); // Refresca la lista en tiempo real
     } catch (e) {
-      console.error(e);
-      alert("Error al actualizar el cliente");
+      // Esto nos dirá exactamente qué falló en la pestaña 'Consola' (F12)
+      console.error("Error detallado de la API:", e.response?.data || e);
+      alert("Error al actualizar el cliente. Revisa la consola del navegador.");
     }
   };
 

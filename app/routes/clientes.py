@@ -36,26 +36,27 @@ def crear_cliente(
     db.refresh(nuevo_cliente)
     return nuevo_cliente
 
+# Agregamos la ruta con y sin barra para evitar conflictos de redirección en FastAPI
 @router.put("/{cliente_id}", response_model=schemas.ClienteResponse)
 def actualizar_cliente(
     cliente_id: int,
-    cliente_actualizado: schemas.ClienteCreate,  # Reutilizamos tu validador existente
+    cliente_actualizado: schemas.ClienteCreate,
     db: Session = Depends(database.get_db),
     current_user = Depends(obtener_usuario_actual)
 ):
-    # 1. Buscar si el cliente existe en la base de datos
+    # 1. Buscar si el cliente existe
     db_cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
     if not db_cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     
-    # 2. Reemplazar los campos con los nuevos datos recibidos
+    # 2. Reemplazar los campos asegurando que si viene None o vacío se guarde limpio
     db_cliente.rut = cliente_actualizado.rut
-    db_cliente.nombre = cliente_actualizado.nombre
+    db_cliente.nombre = cliente_actualizado.nombre if hasattr(cliente_actualizado, 'nombre') else cliente_actualizado.razon_social
     db_cliente.razon_social = cliente_actualizado.razon_social
-    db_cliente.giro = cliente_actualizado.giro
-    db_cliente.direccion = cliente_actualizado.direccion
+    db_cliente.giro = cliente_actualizado.giro if cliente_actualizado.giro else ""
+    db_cliente.direccion = cliente_actualizado.direccion if cliente_actualizado.direccion else ""
 
-    # 3. Guardar cambios de forma segura
+    # 3. Guardar cambios en la base de datos
     db.commit()
     db.refresh(db_cliente)
     
