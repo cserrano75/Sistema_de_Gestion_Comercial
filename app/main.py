@@ -16,7 +16,8 @@ models.Base.metadata.create_all(bind=database.engine)
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://sistema-de-gestion-comercial-1.onrender.com",  # <-- TU NUEVO FRONTEND EN LA NUBE
+    "https://sistema-de-gestion-comercial-1.onrender.com", 
+    "https://sistema-de-gestion-comercial-pi.vercel.app",  # <-- TU NUEVA URL DE VERCEL AQUÍ # <-- TU NUEVO FRONTEND EN LA NUBE
 ]
 
 app.add_middleware(
