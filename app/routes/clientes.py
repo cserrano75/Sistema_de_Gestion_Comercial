@@ -35,3 +35,28 @@ def crear_cliente(
     db.commit()
     db.refresh(nuevo_cliente)
     return nuevo_cliente
+
+@router.put("/{cliente_id}", response_model=schemas.ClienteResponse)
+def actualizar_cliente(
+    cliente_id: int,
+    cliente_actualizado: schemas.ClienteCreate,  # Reutilizamos tu validador existente
+    db: Session = Depends(database.get_db),
+    current_user = Depends(obtener_usuario_actual)
+):
+    # 1. Buscar si el cliente existe en la base de datos
+    db_cliente = db.query(models.Cliente).filter(models.Cliente.id == cliente_id).first()
+    if not db_cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    # 2. Reemplazar los campos con los nuevos datos recibidos
+    db_cliente.rut = cliente_actualizado.rut
+    db_cliente.nombre = cliente_actualizado.nombre
+    db_cliente.razon_social = cliente_actualizado.razon_social
+    db_cliente.giro = cliente_actualizado.giro
+    db_cliente.direccion = cliente_actualizado.direccion
+
+    # 3. Guardar cambios de forma segura
+    db.commit()
+    db.refresh(db_cliente)
+    
+    return db_cliente
