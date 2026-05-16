@@ -64,18 +64,39 @@ def obtener_estadisticas(db: Session = Depends(database.get_db)):
 # --- SECCIÓN 3: BITÁCORA ---
 
 @router.post("/bitacora", response_model=schemas.BitacoraResponse)
-def agregar_entrada_bitacora(entrada: schemas.BitacoraCreate, db: Session = Depends(database.get_db)):
+def agregar_entrada_bitacora(
+    entrada: schemas.BitacoraCreate, 
+    db: Session = Depends(database.get_db),
+    current_user = Depends(obtener_usuario_actual) # 1. Forzamos la sesión del usuario logueado
+):
+    # 2. Verificar que el proyecto exista
     proyecto = db.query(models.Proyecto).filter(models.Proyecto.id == entrada.proyecto_id).first()
     if not proyecto:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     
-    nueva_entrada = models.Bitacora(**entrada.model_dump())
+    # 3. Construir la entrada sanitizando vacíos para que no rompa Pydantic
+    nueva_entrada = models.Bitacora(
+        proyecto_id=entrada.proyecto_id,
+        tipo_contacto=entrada.tipo_contacto if entrada.tipo_contacto else "Llamada",
+        detalle=entrada.detalle.strip() if entrada.detalle else "",
+        estado_proyecto=entrada.estado_proyecto if entrada.estado_proyecto else proyecto.estado,
+        usuario_id=current_user.id # Inyectamos el ID del usuario que inició sesión
+    )
+    
+    # 4. Sincronizar: Actualizamos el estado actual del proyecto principal
+    if entrada.estado_proyecto:
+        proyecto.estado = entrada.estado_proyecto
+
     db.add(nueva_entrada)
     db.commit()
     db.refresh(nueva_entrada)
     return nueva_entrada
 
 @router.get("/{proyecto_id}/bitacora", response_model=list[schemas.BitacoraResponse])
-def obtener_bitacora_proyecto(proyecto_id: int, db: Session = Depends(database.get_db)):
+def obtener_bitacora_proyecto(
+    proyecto_id: int, 
+    db: Session = Depends(database.get_db),
+    current_user = Depends(obtener_usuario_actual) # Protegemos también la lectura
+):
     """Busca el historial de un proyecto específico"""
     return db.query(models.Bitacora).filter(models.Bitacora.proyecto_id == proyecto_id).all()

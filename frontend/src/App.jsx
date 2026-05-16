@@ -143,12 +143,26 @@ const manejarActualizarCliente = async (e) => {
       }
     };
 
-  const guardarEnBitacora = async (nuevaEntrada) => {
+const guardarEnBitacora = async (nuevaEntrada) => {
     try {
-        await api.post('/bitacora/', nuevaEntrada);
-        cargarTodo(); 
+        // Sanitizamos los datos para asegurar que cumplan estrictamente con FastAPI
+        const datosLimpios = {
+            proyecto_id: nuevaEntrada.proyecto_id,
+            tipo_contacto: nuevaEntrada.tipo_contacto || "Llamada",
+            detalle: nuevaEntrada.detalle ? nuevaEntrada.detalle.trim() : "",
+            estado_proyecto: nuevaEntrada.estado_proyecto || "Lead o Prospecto"
+        };
+
+        // Corregido: Endpoint SIN barra final para evitar redirección y bloqueos de CORS
+        await api.post('/bitacora', datosLimpios);
+        
+        cargarTodo(); // Refresca los estados y contadores principales
         setMostrarBitacora(false);
-    } catch (error) { alert("Error al guardar en bitácora"); }
+    } catch (error) { 
+        // Desplegamos el error exacto en la consola por si faltara mapear algo en el componente hijo
+        console.error("Error detallado al guardar bitácora:", error.response?.data || error);
+        alert("Error al guardar en bitácora. Revisa la consola del navegador."); 
+    }
   };
 
   const proyectosFiltrados = proyectos.filter(p => 
