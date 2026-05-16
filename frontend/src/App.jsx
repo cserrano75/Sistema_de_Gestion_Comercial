@@ -4,8 +4,6 @@ import api from './api';
 import Login from './components/login';
 import SeccionBitacora from './components/seccionBitacora';
 
-// const API_BASE = 'http://127.0.0.1:8000';
-
 function App() {
   // --- 1. ESTADOS DE AUTENTICACIÓN ---
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -20,6 +18,10 @@ function App() {
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState(null);
   const [eventosBitacora, setEventosBitacora] = useState([]);
   const [mostrarBitacora, setMostrarBitacora] = useState(false);
+
+  // NUEVOS ESTADOS PARA EDICIÓN DE CLIENTE
+  const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
+  const [clienteEditando, setClienteEditando] = useState(null);
 
   const [stats, setStats] = useState({
       monto_adjudicado: 0,
@@ -37,12 +39,8 @@ function App() {
   const cargarTodo = async () => {
     try {
       setCargando(true);
-      
-      // Fíjate que ya NO necesitas pasar el "config" con los headers. 
-      // El interceptor lo hace por ti en secreto.
-      // Prueba quitando la barra final en la llamada
       const [resProy, resCli, resStats] = await Promise.all([
-        api.get('/proyectos'), // <-- Prueba sin el / final aquí
+        api.get('/proyectos'),
         api.get('/clientes'),
         api.get('/proyectos/stats/resumen')
       ]);
@@ -57,7 +55,6 @@ function App() {
     }
   };
 
-  // Efecto inicial: Verificar si ya hay un token y cargar datos si es así
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -74,15 +71,13 @@ function App() {
 
   const manejarLoginExitoso = () => {
     setIsAuthenticated(true);
-    cargarTodo(); // Cargamos los datos apenas se loguea
+    cargarTodo();
   };
 
   const guardarCliente = async (e) => {
     e.preventDefault();
     try {
-      // No necesitas pasar headers, 'api' ya los lleva
       await api.post('/clientes/', nuevoCliente);
-      
       setNuevoCliente({ rut: '', razon_social: '', giro: '', direccion: '' });
       setMostrarModal(false);
       cargarTodo();
@@ -91,12 +86,31 @@ function App() {
     }
   };
 
+  // NUEVA FUNCIÓN: Dispara los cambios del Cliente al Backend
+  const manejarActualizarCliente = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put(`/clientes/${clienteEditando.id}`, clienteEditando);
+      setMostrarModalEditar(false);
+      setClienteEditando(null);
+      cargarTodo(); // Refresca la lista en tiempo real
+    } catch (e) {
+      console.error(e);
+      alert("Error al actualizar el cliente");
+    }
+  };
+
+  // NUEVA FUNCIÓN: Abre el modal inyectando los datos del cliente actual
+  const abrirEditarCliente = (cliente) => {
+    setClienteEditando({ ...cliente });
+    setMostrarModalEditar(true);
+  };
+
   const manejarGuardarProyecto = async (e) => {
     e.preventDefault();
     if (!nuevoProyecto.cliente_id) return alert("Seleccione cliente");
     try {
       await api.post('/proyectos/', nuevoProyecto);
-      
       setNuevoProyecto({ nombre: '', cliente_id: '', presupuesto: 0, estado: 'Lead o Prospecto' });
       setMostrarModal(false);
       cargarTodo();
@@ -107,9 +121,7 @@ function App() {
 
   const abrirBitacora = async (proyecto) => {
       try {
-        // CORRECCIÓN: La ruta correcta según proyectos.py es /proyectos/{id}/bitacora
         const res = await api.get(`/proyectos/${proyecto.id}/bitacora`);
-        
         setEventosBitacora(res.data);
         setProyectoSeleccionado(proyecto);
         setMostrarBitacora(true);
@@ -121,7 +133,7 @@ function App() {
 
   const guardarEnBitacora = async (nuevaEntrada) => {
     try {
-        await axios.post(`${API_BASE}/bitacora/`, nuevaEntrada);
+        await api.post('/bitacora/', nuevaEntrada);
         cargarTodo(); 
         setMostrarBitacora(false);
     } catch (error) { alert("Error al guardar en bitácora"); }
@@ -131,14 +143,10 @@ function App() {
       filtroEstado === "Todos" ? true : p.estado === filtroEstado
   );
 
-  // --- 5. RENDERIZADO CONDICIONAL ---
-  
-  // Si no está autenticado, mostramos ÚNICAMENTE el Login
   if (!isAuthenticated) {
     return <Login onLoginSuccess={manejarLoginExitoso} />;
   }
 
-  // Si está autenticado, mostramos todo el CRM
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-sans">
       
@@ -151,7 +159,6 @@ function App() {
           <button onClick={() => setVistaActual('proyectos')} className={`w-full text-left p-4 rounded-xl font-bold ${vistaActual === 'proyectos' ? 'bg-blue-600' : 'hover:bg-slate-800'}`}>📊 PROYECTOS</button>
           <button onClick={() => setVistaActual('clientes')} className={`w-full text-left p-4 rounded-xl font-bold ${vistaActual === 'clientes' ? 'bg-blue-600' : 'hover:bg-slate-800'}`}>🏢 CLIENTES</button>
         </nav>
-        {/* Botón de Salir al final del Sidebar */}
         <div className="p-4 border-t border-slate-800">
           <button onClick={handleLogout} className="w-full text-left p-4 rounded-xl font-bold text-red-400 hover:bg-red-900/20 transition-colors">
             🚪 CERRAR SESIÓN
@@ -172,7 +179,6 @@ function App() {
           ) : (
             vistaActual === 'proyectos' ? (
               <div className="space-y-6">
-                
                 {/* KPIs */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                     <div className="bg-white p-6 rounded-2xl shadow-sm border-t-4 border-green-500">
@@ -250,13 +256,26 @@ function App() {
                 </div>
               </div>
             ) : (
-              /* VISTA CLIENTES */
+              /* VISTA CLIENTES + BOTÓN EDITAR MODIFICADO */
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {clientes.map(c => (
-                  <div key={c.id} className="bg-white p-6 rounded-xl shadow border border-slate-100">
-                    <div className="text-[10px] font-black text-slate-300 mb-2">{c.rut}</div>
-                    <h3 className="font-black text-slate-800 uppercase">{c.razon_social}</h3>
-                    <p className="text-xs text-slate-400 mt-1">{c.giro}</p>
+                  <div key={c.id} className="bg-white p-6 rounded-xl shadow border border-slate-100 flex flex-col justify-between">
+                    <div>
+                      <div className="text-[10px] font-black text-slate-300 mb-2">{c.rut}</div>
+                      <h3 className="font-black text-slate-800 uppercase">{c.razon_social}</h3>
+                      {c.giro && <p className="text-xs text-slate-400 mt-1">{c.giro}</p>}
+                      {c.direccion && <p className="text-xs text-slate-400 italic mt-0.5">{c.direccion}</p>}
+                    </div>
+                    
+                    {/* Botón de acción para disparar la edición */}
+                    <div className="mt-4 pt-4 border-t border-slate-50 flex justify-end">
+                      <button 
+                        onClick={() => abrirEditarCliente(c)}
+                        className="text-xs bg-slate-100 hover:bg-blue-50 hover:text-blue-600 px-3 py-1.5 rounded-lg font-bold transition-colors"
+                      >
+                        ✏️ Editar
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -290,6 +309,8 @@ function App() {
               <form onSubmit={guardarCliente} className="space-y-4">
                 <input required placeholder="RUT" className="w-full p-3 bg-slate-50 rounded-lg outline-none" value={nuevoCliente.rut} onChange={e => setNuevoCliente({...nuevoCliente, rut: e.target.value})} />
                 <input required placeholder="Razón Social" className="w-full p-3 bg-slate-50 rounded-lg outline-none" value={nuevoCliente.razon_social} onChange={e => setNuevoCliente({...nuevoCliente, razon_social: e.target.value})} />
+                <input placeholder="Giro" className="w-full p-3 bg-slate-50 rounded-lg outline-none" value={nuevoCliente.giro || ''} onChange={e => setNuevoCliente({...nuevoCliente, giro: e.target.value})} />
+                <input placeholder="Dirección" className="w-full p-3 bg-slate-50 rounded-lg outline-none" value={nuevoCliente.direccion || ''} onChange={e => setNuevoCliente({...nuevoCliente, direccion: e.target.value})} />
                 <button type="submit" className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold">GUARDAR CLIENTE</button>
               </form>
             ) : (
@@ -306,6 +327,40 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* NUEVO MODAL: FORMULARIO EMERGENTE PARA EDICIÓN DE CLIENTE */}
+      {mostrarModalEditar && clienteEditando && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative text-sm">
+            <button onClick={() => setMostrarModalEditar(false)} className="absolute top-4 right-4 font-bold">✕</button>
+            <h2 className="text-2xl font-black mb-6">Editar Cliente</h2>
+            
+            <form onSubmit={manejarActualizarCliente} className="space-y-4">
+              <div>
+                <label className="text-[10px] uppercase font-black text-slate-400 block mb-1">RUT</label>
+                <input required placeholder="RUT" className="w-full p-3 bg-slate-50 rounded-lg outline-none font-bold" value={clienteEditando.rut} onChange={e => setClienteEditando({...clienteEditando, rut: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-black text-slate-400 block mb-1">Razón Social</label>
+                <input required placeholder="Razón Social" className="w-full p-3 bg-slate-50 rounded-lg outline-none font-bold" value={clienteEditando.razon_social} onChange={e => setClienteEditando({...clienteEditando, razon_social: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-black text-slate-400 block mb-1">Giro</label>
+                <input placeholder="Giro (Opcional)" className="w-full p-3 bg-slate-50 rounded-lg outline-none" value={clienteEditando.giro || ''} onChange={e => setClienteEditando({...clienteEditando, giro: e.target.value})} />
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-black text-slate-400 block mb-1">Dirección</label>
+                <input placeholder="Dirección (Opcional)" className="w-full p-3 bg-slate-50 rounded-lg outline-none" value={clienteEditando.direccion || ''} onChange={e => setClienteEditando({...clienteEditando, direccion: e.target.value})} />
+              </div>
+              
+              <button type="submit" className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold shadow-lg shadow-blue-600/20 mt-4">
+                GUARDAR CAMBIOS
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
