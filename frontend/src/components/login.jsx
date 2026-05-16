@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+// 1. CAMBIAMOS LA IMPORTACIÓN: En lugar de axios crudo, importamos tu api configurada
+import api from '../api'; // Ajusta la cantidad de puntos (../) si api.js está en la raíz de src
 
 const Login = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
@@ -18,7 +19,8 @@ const Login = ({ onLoginSuccess }) => {
     formData.append('password', password);
 
     try {
-      const response = await axios.post('http://127.0.0.1:8000/auth/token', formData);
+      // 2. MODIFICAMOS LA LLAMADA: Ahora es dinámica y apunta automáticamente a Render
+      const response = await api.post('/auth/token', formData);
       
       // 1. EXTRAEMOS EL TOKEN
       const token = response.data.access_token;
