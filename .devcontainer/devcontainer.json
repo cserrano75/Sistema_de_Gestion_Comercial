@@ -6,17 +6,6 @@
             "version": "18"
         }
     },
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "ms-python.python",
-                "ms-python.vscode-pylance",
-                "dbaeumer.vscode-eslint"
-            ]
-        }
-    },
-    "onCreateCommand": "pip install -r requirements.txt",
-    "updateContentCommand": "cd frontend && npm install",
     "forwardPorts": [8000, 5173],
-    "postCreateCommand": "echo '¡Entorno listo! Usa uvicorn para el backend y npm run dev para el frontend.'"
+    "postCreateCommand": "cd frontend && npm install"
 }

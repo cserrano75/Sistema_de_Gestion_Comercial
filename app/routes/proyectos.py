@@ -4,7 +4,7 @@ from typing import List
 
 # CAMBIO AQUÍ: Importaciones absolutas
 from app import models, schemas, database
-from auth import obtener_usuario_actual
+from app.auth import obtener_usuario_actual
 
 router = APIRouter(prefix="/proyectos", tags=["Proyectos"])
 
