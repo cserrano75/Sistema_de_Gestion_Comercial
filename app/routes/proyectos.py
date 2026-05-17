@@ -3,9 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 
 # CAMBIO AQUÍ: Importaciones absolutas
-import models, schemas, database
+from app import models, schemas, database
 from auth import obtener_usuario_actual
-
 
 router = APIRouter(prefix="/proyectos", tags=["Proyectos"])
 

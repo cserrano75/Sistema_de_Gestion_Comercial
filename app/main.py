@@ -1,28 +1,26 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth_routes, proyectos, clientes, bitacora  # Volvemos al original
-import models
-import database
+from app.routes import auth_routes, proyectos, clientes, bitacora
 
-# Una Sola instancia con toda la configuración unificada
-app = FastAPI(title="CRM Industrial API", redirect_slashes=False)
+# Borramos el 'import models' viejo y dejamos solo este:
+from app import models, database 
 
-# Crear tablas si no existen
+# 1. Crear las tablas usando las referencias correctas
 models.Base.metadata.create_all(bind=database.engine)
 
-# 3. Configuramos CORS de forma segura
-# Aunque tienes ["*"] (que permite todo), definamos explícitamente los orígenes
-# para asegurar que Render no rechace las credenciales/tokens del localhost.
+# 2. Inicializar la App desactivando redirección de barras diagonales
+app = FastAPI(title="CRM Industrial API", redirect_slashes=False)
+
+# 3. Configuración robusta de CORS
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://sistema-de-gestion-comercial-1.onrender.com", 
-    "https://sistema-de-gestion-comercial-pi.vercel.app",  # <-- TU NUEVA URL DE VERCEL AQUÍ # <-- TU NUEVO FRONTEND EN LA NUBE
+    "https://sistema-de-gestion-comercial-pi.vercel.app",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Cambiado de "*" a la lista explícita para evitar conflictos con credenciales
+    allow_origins=["*"], # Mantenemos el comodín temporal para saltar el bloqueo en Vercel/Render
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

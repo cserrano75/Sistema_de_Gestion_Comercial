@@ -1,7 +1,7 @@
 # app/routes/bitacora.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-import models, database, schemas
+from app import models, schemas, database
 from auth import obtener_usuario_actual
 
 router = APIRouter(prefix="/bitacora", tags=["Bitácora"])

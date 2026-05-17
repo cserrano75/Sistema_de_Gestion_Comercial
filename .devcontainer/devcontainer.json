@@ -1,19 +1,22 @@
 {
-    "name": "CRM Industrial Dev",
-    "build": {
-        "dockerfile": "../Dockerfile",
-        "context": ".."
+    "name": "CRM Industrial - Codespaces",
+    "image": "mcr.microsoft.com/devcontainers/python:3.11-bullseye",
+    "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "18"
+        }
     },
     "customizations": {
         "vscode": {
             "extensions": [
                 "ms-python.python",
-                "ms-azuretools.vscode-docker",
-                "njpwerner.autodocstring",
-                "ms-python.vscode-pylance"
+                "ms-python.vscode-pylance",
+                "dbaeumer.vscode-eslint"
             ]
         }
     },
-    "remoteUser": "root",
-    "forwardPorts": [10000, 5173]
+    "onCreateCommand": "pip install -r requirements.txt",
+    "updateContentCommand": "cd frontend && npm install",
+    "forwardPorts": [8000, 5173],
+    "postCreateCommand": "echo '¡Entorno listo! Usa uvicorn para el backend y npm run dev para el frontend.'"
 }

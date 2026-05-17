@@ -144,20 +144,27 @@ function App() {
 
   const guardarEnBitacora = async (nuevaEntrada) => {
     try {
+        // CORREGIDO: Mapeamos tanto 'tipo_entrada' como 'tipo_contacto' por seguridad 
+        // y removemos el emoji si el selector lo incluye (ej: "📞 Llamada" -> "Llamada")
+        const tipoLimpio = (nuevaEntrada.tipo_entrada || nuevaEntrada.tipo_contacto || "Llamada")
+          .replace(/[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, "")
+          .trim();
+
         const datosLimpios = {
             proyecto_id: parseInt(nuevaEntrada.proyecto_id), 
-            tipo_entrada: nuevaEntrada.tipo_entrada || "Llamada", 
+            tipo_entrada: tipoLimpio, // FastAPI espera este campo limpio sin emojis
             contenido: nuevaEntrada.contenido ? nuevaEntrada.contenido.trim() : "", 
             estado_nuevo: nuevaEntrada.estado_nuevo || null 
         };
 
+        // Forzamos la barra diagonal al final
         await api.post('/bitacora/', datosLimpios);
         
-        cargarTodo(); 
+        cargarTodo(); // Refresca la interfaz
         setMostrarBitacora(false);
     } catch (error) { 
         console.error("Error detallado al guardar bitácora:", error.response?.data || error);
-        alert("Error al guardar en bitácora. Revisa la consola del navegador."); 
+        alert("Error al guardar en bitácora. Revisa los campos enviados."); 
     }
   };
 

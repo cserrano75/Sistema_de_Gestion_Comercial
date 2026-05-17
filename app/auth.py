@@ -6,7 +6,7 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 # IMPORTACIONES DE TU BASE DE DATOS Y MODELOS
-import database, models
+from app import database, models
 
 SECRET_KEY = "CLAVE_SUPER_SECRETA_123"
 ALGORITHM = "HS256"

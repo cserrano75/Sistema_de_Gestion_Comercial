@@ -6,7 +6,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, DateTime, Text # <--- Importamos Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from database import Base
+from app.database import Base
 
 class Cliente(Base):
     __tablename__ = "clientes"
