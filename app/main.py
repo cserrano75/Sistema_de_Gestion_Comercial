@@ -1,17 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# IMPORTACIONES DIRECTAS
-from app.routes import auth_routes, proyectos, clientes, bitacora
-import models, database
+from routes import auth_routes, proyectos, clientes, bitacora  # Volvemos al original
+import models
+import database
 
-# 1. Creamos la instancia ÚNICA de FastAPI con su título profesional
-app = FastAPI(title="CRM Industrial API")
+# Una Sola instancia con toda la configuración unificada
+app = FastAPI(title="CRM Industrial API", redirect_slashes=False)
 
-# 2. Creamos las tablas en la base de datos si no existen
+# Crear tablas si no existen
 models.Base.metadata.create_all(bind=database.engine)
-
-# FUERZA A FASTAPI A NO REDIRIGIR LAS BARRAS EN PRODUCCIÓN
-app = FastAPI(redirect_slashes=False)
 
 # 3. Configuramos CORS de forma segura
 # Aunque tienes ["*"] (que permite todo), definamos explícitamente los orígenes

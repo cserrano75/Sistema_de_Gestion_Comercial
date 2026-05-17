@@ -39,10 +39,11 @@ function App() {
   const cargarTodo = async () => {
     try {
       setCargando(true);
+      // CORREGIDO: Se agregaron las barras diagonales '/' al final de cada endpoint
       const [resProy, resCli, resStats] = await Promise.all([
-        api.get('/proyectos'),
-        api.get('/clientes'),
-        api.get('/proyectos/stats/resumen')
+        api.get('/proyectos/'),
+        api.get('/clientes/'),
+        api.get('/proyectos/stats/resumen/')
       ]);
 
       setProyectos(resProy.data || []);
@@ -87,32 +88,29 @@ function App() {
   };
 
   // NUEVA FUNCIÓN: Dispara los cambios del Cliente al Backend
-const manejarActualizarCliente = async (e) => {
+  const manejarActualizarCliente = async (e) => {
     e.preventDefault();
     try {
-      // Limpiamos los valores null o undefined para que Pydantic no se queje
       const datosLimpios = {
         rut: clienteEditando.rut,
         razon_social: clienteEditando.razon_social,
-        nombre: clienteEditando.nombre || clienteEditando.razon_social, // Por si tu esquema pide 'nombre'
+        nombre: clienteEditando.nombre || clienteEditando.razon_social, 
         giro: clienteEditando.giro || "",
         direccion: clienteEditando.direccion || ""
       };
 
-      // Probamos agregándole la barra final por si acaso
-      await api.put(`/clientes/${clienteEditando.id}`, datosLimpios);
+      // CORREGIDO: Se añadió la barra diagonal '/' al final de la ruta dinámica
+      await api.put(`/clientes/${clienteEditando.id}/`, datosLimpios);
       
       setMostrarModalEditar(false);
       setClienteEditando(null);
-      cargarTodo(); // Refresca la lista en tiempo real
+      cargarTodo(); 
     } catch (e) {
-      // Esto nos dirá exactamente qué falló en la pestaña 'Consola' (F12)
       console.error("Error detallado de la API:", e.response?.data || e);
       alert("Error al actualizar el cliente. Revisa la consola del navegador.");
     }
   };
 
-  // NUEVA FUNCIÓN: Abre el modal inyectando los datos del cliente actual
   const abrirEditarCliente = (cliente) => {
     setClienteEditando({ ...cliente });
     setMostrarModalEditar(true);
@@ -132,20 +130,20 @@ const manejarActualizarCliente = async (e) => {
   };
 
   const abrirBitacora = async (proyecto) => {
-      try {
-        const res = await api.get(`/proyectos/${proyecto.id}/bitacora`);
-        setEventosBitacora(res.data);
-        setProyectoSeleccionado(proyecto);
-        setMostrarBitacora(true);
-      } catch (error) {
-        console.error("Error al cargar bitácora:", error);
-        alert("No se pudo cargar el historial de este proyecto");
-      }
-    };
-
-const guardarEnBitacora = async (nuevaEntrada) => {
     try {
-        // Sanitizamos los datos con los nombres correctos que ya aprobó el backend
+      // CORREGIDO: Se añadió la barra diagonal '/' al final del recurso de la bitácora
+      const res = await api.get(`/proyectos/${proyecto.id}/bitacora/`);
+      setEventosBitacora(res.data);
+      setProyectoSeleccionado(proyecto);
+      setMostrarBitacora(true);
+    } catch (error) {
+      console.error("Error al cargar bitácora:", error);
+      alert("No se pudo cargar el historial de este proyecto");
+    }
+  };
+
+  const guardarEnBitacora = async (nuevaEntrada) => {
+    try {
         const datosLimpios = {
             proyecto_id: parseInt(nuevaEntrada.proyecto_id), 
             tipo_entrada: nuevaEntrada.tipo_entrada || "Llamada", 
@@ -153,16 +151,15 @@ const guardarEnBitacora = async (nuevaEntrada) => {
             estado_nuevo: nuevaEntrada.estado_nuevo || null 
         };
 
-        // FORZAMOS LA BARRA FINAL: Si tu backend exige la barra para no dar 404, se la ponemos explícitamente
         await api.post('/bitacora/', datosLimpios);
         
-        cargarTodo(); // Refresca los estados y contadores principales
+        cargarTodo(); 
         setMostrarBitacora(false);
     } catch (error) { 
         console.error("Error detallado al guardar bitácora:", error.response?.data || error);
         alert("Error al guardar en bitácora. Revisa la consola del navegador."); 
     }
-};
+  };
 
   const proyectosFiltrados = proyectos.filter(p => 
       filtroEstado === "Todos" ? true : p.estado === filtroEstado
@@ -281,7 +278,7 @@ const guardarEnBitacora = async (nuevaEntrada) => {
                 </div>
               </div>
             ) : (
-              /* VISTA CLIENTES + BOTÓN EDITAR MODIFICADO */
+              /* VISTA CLIENTES */
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {clientes.map(c => (
                   <div key={c.id} className="bg-white p-6 rounded-xl shadow border border-slate-100 flex flex-col justify-between">
@@ -292,7 +289,6 @@ const guardarEnBitacora = async (nuevaEntrada) => {
                       {c.direccion && <p className="text-xs text-slate-400 italic mt-0.5">{c.direccion}</p>}
                     </div>
                     
-                    {/* Botón de acción para disparar la edición */}
                     <div className="mt-4 pt-4 border-t border-slate-50 flex justify-end">
                       <button 
                         onClick={() => abrirEditarCliente(c)}
@@ -353,7 +349,7 @@ const guardarEnBitacora = async (nuevaEntrada) => {
         </div>
       )}
 
-      {/* NUEVO MODAL: FORMULARIO EMERGENTE PARA EDICIÓN DE CLIENTE */}
+      {/* MODAL DE EDICIÓN DE CLIENTE */}
       {mostrarModalEditar && clienteEditando && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur flex items-center justify-center z-50">
           <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative text-sm">
