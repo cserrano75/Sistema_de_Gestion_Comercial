@@ -37,28 +37,50 @@ def crear_nuevo_proyecto(
 # --- SECCIÓN 2: ESTADÍSTICAS ---
 # IMPORTANTE: Solo dejamos UNA versión de esta función
 
-@router.get("/stats/resumen")
+# --- SECCIÓN 2: ESTADÍSTICAS ---
+# IMPORTANTE: Cambiamos la ruta para que cuadre exactamente con el frontend
+
+# --- SECCIÓN 2: ESTADÍSTICAS ---
+# Sincronizado exactamente con el frontend y blindado contra bases de datos vacías
+
+@router.get("/stats/resumen/", response_model=dict)  # 👈 ¡Asegúrate de que diga esto completo!
 def obtener_estadisticas(db: Session = Depends(database.get_db)):
-    proyectos = db.query(models.Proyecto).all()
-    total = len(proyectos)
-    
-    if total == 0:
+    try:
+        proyectos = db.query(models.Proyecto).all()
+        total = len(proyectos)
+        
+        # Si la base de datos está vacía, respondemos de inmediato con ceros seguros
+        if total == 0:
+            return {
+                "monto_adjudicado": 0,
+                "monto_en_estudio": 0,
+                "monto_perdido": 0,
+                "tasa_conversion": 0,
+                "total_proyectos": 0
+            }
+
+        adjudicados = [p for p in proyectos if p.estado == "Adjudicado"]
+        estudio = [p for p in proyectos if p.estado in ["Estudio", "Cotizado"]]
+        perdidos = [p for p in proyectos if p.estado == "Perdido"]
+
         return {
-            "monto_adjudicado": 0, "monto_en_estudio": 0, "monto_perdido": 0,
-            "tasa_conversion": 0, "total_proyectos": 0
+            "monto_adjudicado": sum(p.presupuesto for p in adjudicados) if adjudicados else 0,
+            "monto_en_estudio": sum(p.presupuesto for p in estudio) if estudio else 0,
+            "monto_perdido": sum(p.presupuesto for p in perdidos) if perdidos else 0,
+            "tasa_conversion": round((len(adjudicados) / total * 100), 1) if total > 0 else 0,
+            "total_proyectos": total
         }
-
-    adjudicados = [p for p in proyectos if p.estado == "Adjudicado"]
-    estudio = [p for p in proyectos if p.estado in ["Estudio", "Cotizado"]]
-    perdidos = [p for p in proyectos if p.estado == "Perdido"]
-
-    return {
-        "monto_adjudicado": sum(p.presupuesto for p in adjudicados),
-        "monto_en_estudio": sum(p.presupuesto for p in estudio),
-        "monto_perdido": sum(p.presupuesto for p in perdidos),
-        "tasa_conversion": round((len(adjudicados)/total*100), 1),
-        "total_proyectos": total
-    }
+        
+    except Exception as e:
+        print(f"⚠️ Alerta controlada en estadísticas (BD vacía o procesando): {e}")
+        # Retorno de emergencia en caso de fallas imprevistas
+        return {
+            "monto_adjudicado": 0,
+            "monto_en_estudio": 0,
+            "monto_perdido": 0,
+            "tasa_conversion": 0,
+            "total_proyectos": 0
+        }
 
 # --- SECCIÓN 3: BITÁCORA ---
 
@@ -91,11 +113,11 @@ def agregar_entrada_bitacora(
     db.refresh(nueva_entrada)
     return nueva_entrada
 
-@router.get("/{proyecto_id}/bitacora", response_model=list[schemas.BitacoraResponse])
+@router.get("/{proyecto_id}/bitacora/", response_model=list[schemas.BitacoraResponse]) # 👈 ¡Le agregamos la barra '/' al final!
 def obtener_bitacora_proyecto(
     proyecto_id: int, 
     db: Session = Depends(database.get_db),
-    current_user = Depends(obtener_usuario_actual) # Protegemos también la lectura
+    current_user = Depends(obtener_usuario_actual)
 ):
     """Busca el historial de un proyecto específico"""
     return db.query(models.Bitacora).filter(models.Bitacora.proyecto_id == proyecto_id).all()

@@ -1,27 +1,63 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth_routes, proyectos, clientes, bitacora
+from passlib.context import CryptContext
 
-# Borramos el 'import models' viejo y dejamos solo este:
+# Importaciones de tu CRM
 from app import models, database 
+from app.database import SessionLocal
+from app.models import User
+from app.routes import auth_routes, proyectos, clientes, bitacora
 
 # 1. Crear las tablas usando las referencias correctas
 models.Base.metadata.create_all(bind=database.engine)
 
-# === 🚀 INYECCIÓN DIRECTA DE EMERGENCIA (EVITA SCRIPTS EXT) ===
-from app.database import SessionLocal
-from app.models import User
-from passlib.context import CryptContext
+# 2. Inicializar la App desactivando redirección de barras diagonales
+app = FastAPI(title="CRM Industrial API", redirect_slashes=False)
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# 3. Configuración Robusta de CORS para Codespaces - original
+""" origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://sistema-de-gestion-comercial-pi.vercel.app",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    # allow_origins=["*"],
+    allow_origin_regex=r"https://.*\.app\.github\.dev",  # Autoriza dinámicamente cualquier puerto proxy de tu GitHub
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+) """
+
+# # 3. Configuración Robusta de CORS para Codespaces - propuesta
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://sistema-de-gestion-comercial-pi.vercel.app",
+    "https://cuddly-space-parakeet-jj65xpp75pvh5qvp-5173.app.github.dev",  # 👈 Tu frontend actual
+    "https://cuddly-space-parakeet-jj65xpp75pvh5qvp-8000.app.github.dev"   # 👈 Tu backend actual
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # 👈 Usamos la lista explícita segura
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# === 🚀 INYECCIÓN DIRECTA DE EMERGENCIA (Falta en tu archivo actual) ===
 db_temporal = SessionLocal()
 try:
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     correo_emergencia = "claudio.serrano.rojas@gmail.com"
-    # Borramos cualquier rastro corrupto que el backend tenga en SU base de datos real
+    
+    # Limpiamos registros huérfanos o corruptos
     db_temporal.query(User).filter(User.email == correo_emergencia).delete()
     db_temporal.commit()
     
-    # Creamos el usuario fresco con la clave correcta usando la encriptación directa del backend
+    # Insertamos tu usuario final de forma limpia con hash verificado por passlib
     user_root = User(
         email=correo_emergencia,
         hashed_password=pwd_context.hash("csr2026"),
@@ -35,25 +71,7 @@ except Exception as e:
     print(f"\n❌ Error en la inyección interna: {e}\n")
 finally:
     db_temporal.close()
-# =============================================================
-
-# 2. Inicializar la App desactivando redirección de barras diagonales
-app = FastAPI(title="CRM Industrial API", redirect_slashes=False)
-
-# 3. Configuración robusta de CORS
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://sistema-de-gestion-comercial-pi.vercel.app",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # Mantenemos el comodín temporal para saltar el bloqueo en Vercel/Render
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# ===================================================================
 
 # 4. Registro de rutas (Endpoints)
 app.include_router(auth_routes.router)
